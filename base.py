@@ -30,12 +30,27 @@ class Action(object):
         return "cmd:{} point:{}".format(self.cmd, self.point)
 
     def getGcode(self):
-        return "{} {}".format(self.cmd, self.point)
+        pointStr = str(self.point)
+        if pointStr != "":
+            pointStr = " " + pointStr
+        return "{}{}".format(self.cmd, pointStr)
 
 class cmd_home(Action):
     """homing cycle"""
     def __init__(self):
         super().__init__("$H")
+
+
+class cmd_comment(Action):
+    """homing cycle"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+    def __str__(self):
+        return "comment:{} point:{}".format(self.cmd, self.point)
+
+    def getGcode(self):
+        return "({})".format(self.cmd)
 
 
 class cmd_unitsInches(Action):
@@ -82,6 +97,12 @@ class cmd_activateSpindleCW(Action):
     def __init__(self, ):
         super().__init__("M3")
 
+class cmd_stopSpindle(Action):
+    """Stop spindle"""
+    def __init__(self, ):
+        super().__init__("M5")
+
+
 class cmd_g0(Action):
     """linear NONcut motion"""
     def __init__(self, x=None, y=None, z=None):
@@ -112,6 +133,13 @@ class Assembly(object):
         else:
             self.children = []
 
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *exc):
+        self.elab()
+        return False
+    
     def defaultName(self):
         return self.__class__.__name__
         
@@ -120,11 +148,14 @@ class Assembly(object):
 
     def __iadd__(self, other):
         self.checkType(other)
+        # self.children.append(other)
+        # if isinstance(other, Assembly):
+        #     other.cncCfg = self.cncCfg
+        #     other.elab()
         self.children.append(other)
         if isinstance(other, Assembly):
-            print("isinstance(other, Assembly)")
-            other.cncCfg = self.cncCfg
-            other.elab()
+            with other:
+                other.cncCfg = self.cncCfg
         return self
 
     def __str__(self):
@@ -185,10 +216,23 @@ class asm_header(Assembly):
         self += cmd_setFeedRate(self.cncCfg["defaultMillingFeedRate"])
 
         
+class asm_footer(Assembly):
+    
+    def elab(self):
+        self += cmd_g0(z=self.cncCfg["zSafe"])
+        self += cmd_stopSpindle()
+        self += cmd_home()
+
+        
 class asm_file(Assembly):
-    def __init__(self, cncCfg, name=None):
+    def __init__(self, cncCfg, name=None, comments=()):
          super().__init__(name, cncCfg, )
+         for comment in comments:
+             self += cmd_comment(comment)
          self += asm_header()
+             
+    def elab(self):
+        self += asm_footer()
 
 class asm_drillHole(Assembly):
     
@@ -214,13 +258,14 @@ class asm_drillHole(Assembly):
             plungeRate = self.cncCfg["defaultDrillingFeedRate"]
         if zMargin is None:
             zMargin = self.cncCfg["zMargin"]
-        self += cmd_g0(self.cncCfg["zSafe"])
+        self += cmd_g0(z=self.cncCfg["zSafe"])
         self += cmd_g0(xCenter, yCenter)
         self += cmd_g0(z=zMargin + zTop)
         self += cmd_setFeedRate(plungeRate)
         self += cmd_g1(z=zBottom)
         self += cmd_g1(z=zTop)
         self += cmd_g0(z=zMargin + zTop)
+        self += cmd_g0(z=self.cncCfg["zSafe"])
         
 class point(np.ndarray):
     def __new__(cls, x=None, y=None, z=None):
@@ -281,22 +326,57 @@ class CncMachineConfig(object):
 mmPerInch = 25.4
 
 #def drillbotRightAlignmentHoles():
+
+def gen_bot_right_align_holes():
+    toolDia = (1 / 8) * mmPerInch
+    comments = []
+    comments.append('Use {}" ball nose'.format(toolDia / mmPerInch))
+    comments.append("Home first!  Zero X and Y at home!")
+    comments.append("Zero Z manually using a sheet of paper!")
+        
+    tool=Tool(cutDiameter=toolDia)
+    cncCfg = CncMachineConfig(tool,
+                              zSafe=20,
+                              )
+    #
+    holeDepth = 0.35 * mmPerInch
+    botRight = (-20, -180)
+    centers = []
+    offsets = [offsetInches * mmPerInch for offsetInches in (0.5, 1.5, 2.5)]
+    for offset in offsets:
+        centers.append((botRight[0] + toolDia / 2, botRight[1] + offset))
+    for offset in offsets:
+        centers.append((botRight[0] - offset, botRight[1] - toolDia / 2))
+
+    asmFile = asm_file(name="Drill bot right align holes in wasteboard", cncCfg=cncCfg, comments=comments)
+    with asmFile as asm:
+        for center in centers:
+            asm += asm_drillHole(center[0], center[1], 
+                                 zTop=0, zBottom=-holeDepth, )    
+            #asm += cmd_g0(z=cncCfg["zSafe"])
+    
+    return asmFile
+    
+    
 def demo(argv):
     cfg = parseArgs(argv)
-    cncCfg = CncMachineConfig(tool=Tool(cutDiameter=(1 / 8) * mmPerInch),
-                              zSafe=50,
-                              )
-    asm = asm_file(name="demo", cncCfg=cncCfg, )
-    asm += asm_drillHole(
-        xCenter=10, yCenter=20, 
-        zTop=0, zBottom=-30,
-        )
-    asm += asm_drillHole(
-        xCenter=21, yCenter=11, 
-        zTop=0, zBottom=-20,
-        )
-    log.info("*****\n{}\n".format(asm))
-    log.info("*****\n{}\n".format(asm.getGcode()))
+    # cncCfg = CncMachineConfig(tool=Tool(cutDiameter=(1 / 8) * mmPerInch),
+    #                           zSafe=50,
+    #                           )
+    # asm = asm_file(name="demo", cncCfg=cncCfg, )
+    # asm += asm_drillHole(
+    #     xCenter=10, yCenter=20, 
+    #     zTop=0, zBottom=-30,
+    #     )
+    # asm += asm_drillHole(
+    #     xCenter=21, yCenter=11, 
+    #     zTop=0, zBottom=-20,
+    #     )
+    # log.info("*****\n{}\n".format(asm))
+    # log.info("*****\n{}\n".format(asm.getGcode()))
+    alignHolesAsm = gen_bot_right_align_holes()
+    log.info("*****\n{}\n".format(alignHolesAsm))
+    log.info("*****\n{}\n".format(alignHolesAsm.getGcode()))
 
 def parseArgs(argv):
     description = __doc__
