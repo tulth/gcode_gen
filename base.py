@@ -9,6 +9,7 @@ import sys
 import logging
 import argparse
 import collections
+import numpy as np
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
@@ -16,11 +17,14 @@ logHandler = logging.StreamHandler(sys.stdout)
 log.addHandler(logHandler)
 
 
+def num2str(arg):
+    return "{:.5f}".format(arg)
+    
 class Action(object):
     def __init__(self, cmd, x=None, y=None, z=None, r=None):
         super().__init__()
         self.cmd = cmd
-        self.point = point(x, y, z, r)
+        self.point = point(x, y, z)
 
     def __str__(self):
         return "cmd:{} point:{}".format(self.cmd, self.point)
@@ -140,15 +144,34 @@ class Assembly(object):
         return "\n".join(strList)
 
     def getGcode(self):
-        strList = ["({})".format(self.label)]
-        for child in self.children:
-            strList.append(child.getGcode())
-        return "\n".join(strList)
+        flatAsm = self.getFlattened()
+        return flatAsm.getGcode()
 
+    def getFlattened(self):
+        flatAsm = FlattenedAssembly()
+        flatAsm.append(FlattenedAssemblyEntry("({})".format(self.label)))
+        for child in self.children:
+            if isinstance(child, Assembly):
+                flatAsm.extend(child.getFlattened())
+            else:
+                flatAsm.append(child)
+        return flatAsm
+    
     def elab(self):
         """Define in subclass"""
         pass
 
+class FlattenedAssemblyEntry(Action):
+    pass
+
+class FlattenedAssembly(list):
+
+    def getGcode(self):
+        strList = []
+        for entry in self:
+            strList.append(entry.getGcode())
+        return "\n".join(strList)
+    
 class asm_header(Assembly):
     
     def elab(self):
@@ -199,21 +222,32 @@ class asm_drillHole(Assembly):
         self += cmd_g1(z=zTop)
         self += cmd_g0(z=zMargin + zTop)
         
-class point(list):
-    def __init__(self, x=None, y=None, z=None, r=None):
-        initArg = []
-        for val in (x, y, z, r):
-            initArg.append(val)
-        super().__init__(initArg)
+class point(np.ndarray):
+    def __new__(cls, x=None, y=None, z=None):
+        obj = np.asarray((x, y, z)).view(cls)
+        return obj
 
+    def __array_finalize__(self, obj):
+        self.info = getattr(obj, 'info', None)
+        
     def __str__(self):
         retList = []
-        for id, val in zip(("X", "Y", "Z", "R"), self):
+        for label, val in zip(("X", "Y", "Z"), self):
             if val is not None:
-                retList.append("{}{:.5f}".format(id, val))
+                retList.append("{}{}".format(label, num2str(val)))
         return " ".join(retList)
 
-
+    def expand(prevPoint):
+        for idx, val in enumerate(self):
+            if val is None:
+                self[idx] = prevPoint[idx]
+                
+    def compress(prevPoint):
+        for idx, val in enumerate(self):
+            if self[idx] == prevPoint[idx]:
+                val = None
+                
+        
 class Tool(object):
     def __init__(self,
                  cutDiameter,
@@ -263,7 +297,6 @@ def demo(argv):
         )
     log.info("*****\n{}\n".format(asm))
     log.info("*****\n{}\n".format(asm.getGcode()))
-
 
 def parseArgs(argv):
     description = __doc__
