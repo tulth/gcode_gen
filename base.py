@@ -411,23 +411,36 @@ class CncMachineConfig(object):
     
 def demo(argv):
     cfg = parseArgs(argv)
-    # cncCfg = CncMachineConfig(tool=Tool(cutDiameter=(1 / 8) * mmPerInch),
-    #                           zSafe=50,
-    #                           )
-    # asm = asm_file(name="demo", cncCfg=cncCfg, )
-    # asm += asm_drillHole(
-    #     xCenter=10, yCenter=20, 
-    #     zTop=0, zBottom=-30,
-    #     )
-    # asm += asm_drillHole(
-    #     xCenter=21, yCenter=11, 
-    #     zTop=0, zBottom=-20,
-    #     )
-    # log.info("*****\n{}\n".format(asm))
-    # log.info("*****\n{}\n".format(asm.getGcode()))
-    alignHolesAsm = gen_bot_right_align_holes()
-    log.info("*****\n{}\n".format(alignHolesAsm))
-    log.info("*****\n{}\n".format(alignHolesAsm.getGcode()))
+    toolDia = (1 / 8) * mmPerInch
+    comments = []
+    comments.append('Use {}" ball nose'.format(toolDia / mmPerInch))
+    comments.append("Home first!  Zero X and Y at home!")
+    comments.append("Zero Z manually using a sheet of paper!")
+        
+    tool=Tool(cutDiameter=toolDia)
+    cncCfg = CncMachineConfig(tool,
+                              zSafe=20,
+                              )
+    #
+    holeDepth = 0.35 * mmPerInch
+    botRight = (-20, -180)
+    centers = []
+    offsets = [offsetInches * mmPerInch for offsetInches in (0.5, 1.5)]
+    for offset in offsets:
+        centers.append((botRight[0] + toolDia / 2, botRight[1] + offset))
+    for offset in offsets:
+        centers.append((botRight[0] - offset, botRight[1] - toolDia / 2))
+
+    asmFile = asm_file(name="Drill bot right align holes in wasteboard", cncCfg=cncCfg, comments=comments)
+    with asmFile as asm:
+        for center in centers:
+            asm += asm_drillHole(center[0], center[1], 
+                                 zTop=0, zBottom=-holeDepth, )    
+            #asm += cmd_g0(z=cncCfg["zSafe"])
+    
+    log.info("*****\n{}\n".format(asmFile))
+    log.info("*****\n{}\n".format(asmFile.getGcode()))
+    log.info("*****\n{}\n".format(asmFile.expand().getGcode()))
 
 def parseArgs(argv):
     description = __doc__
