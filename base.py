@@ -99,29 +99,18 @@ class Assembly(object):
     def __init__(self, name=None, cncCfg=None, val=None, ):
         super().__init__()
         if name is None:
-            name = ""
+            name = self.defaultName()
         self.name = name
-        self._cncCfg = DeferredVal(cncCfg)
-        print("self._cncCfg: {}".format(self._cncCfg))
-        print("self._cncCfg.val: {}".format(self._cncCfg.val))
+        self.cncCfg = cncCfg
         if val is not None:
             self.checkType(val)
             self.children = [val]
         else:
             self.children = []
 
-    def getCncCfgVal(self, key):
-        return DeferredVal(lambda: self.cncCfg[key])
-    
-    @property
-    def cncCfg(self):
-        return self._cncCfg.val
-    
-    @cncCfg.setter
-    def cncCfg(self, arg):
-        print("cncCfgSetter: arg {}".format(arg))
-        self._cncCfg.val = arg
-    
+    def defaultName(self):
+        return self.__class__.__name__
+        
     def checkType(self, other):
         assert isinstance(other, Assembly) or isinstance(other, Action)
 
@@ -131,6 +120,7 @@ class Assembly(object):
         if isinstance(other, Assembly):
             print("isinstance(other, Assembly)")
             other.cncCfg = self.cncCfg
+            other.elab()
         return self
 
     def __str__(self):
@@ -155,39 +145,53 @@ class Assembly(object):
             strList.append(child.getGcode())
         return "\n".join(strList)
 
+    def elab(self):
+        """Define in subclass"""
+        pass
 
 class asm_header(Assembly):
-    def __init__(self):
-        super().__init__("Header")
+    
+    def elab(self):
         self += cmd_home()
         self += cmd_unitsMillimeters()
         self += cmd_motionAbsolute()
         # self += cmd_setSpindleSpeed(self.cncCfg["spindleSpeed"])
-        self += cmd_setSpindleSpeed(DeferredVal(lambda: self.cncCfg["spindleSpeed"]))
+        self += cmd_setSpindleSpeed(self.cncCfg["spindleSpeed"])
         self += cmd_activateSpindleCW()
-        self += cmd_g0(z=DeferredVal(lambda: self.cncCfg["zSafe"]))
-        self += cmd_setFeedRate(DeferredVal(lambda: self.cncCfg["defaultMillingFeedRate"]))
+        self += cmd_g0(z=self.cncCfg["zSafe"])
+        self += cmd_setFeedRate(self.cncCfg["defaultMillingFeedRate"])
 
         
 class asm_file(Assembly):
-    def __init__(self, name, cncCfg, ):
+    def __init__(self, cncCfg, name=None):
          super().__init__(name, cncCfg, )
-         print("asm_file self.cncCfg: {}".format(self.cncCfg))
          self += asm_header()
 
 class asm_drillHole(Assembly):
     
-    def __init__(self,
-                 xCenter, yCenter, 
-                 zTop, zBottom,
-                 name="drillHole",
-                 plungeRate=None, zMargin=None):
-        super().__init__(name, )
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        if "name" in self.kwargs:
+            name = self.kwargs["name"]
+            del self.kwargs["name"]
+        else:
+            name = self.defaultName()
+        super().__init__(name=name, cncCfg=None, )
+         
+    def elab(self):
+        self._elab(*self.args, **self.kwargs)
+        
+    def _elab(self,
+              xCenter, yCenter, 
+              zTop, zBottom,
+              name="drillHole",
+              plungeRate=None, zMargin=None):
         if plungeRate is None:
-            plungeRate = DeferredVal(lambda: self.cncCfg["defaultDrillingFeedRate"])
+            plungeRate = self.cncCfg["defaultDrillingFeedRate"]
         if zMargin is None:
-            zMargin = self.getCncCfgVal("zMargin")
-        self += cmd_g0(self.getCncCfgVal("zSafe"))
+            zMargin = self.cncCfg["zMargin"]
+        self += cmd_g0(self.cncCfg["zSafe"])
         self += cmd_g0(xCenter, yCenter)
         self += cmd_g0(z=zMargin + zTop)
         self += cmd_setFeedRate(plungeRate)
@@ -199,17 +203,12 @@ class point(list):
     def __init__(self, x=None, y=None, z=None, r=None):
         initArg = []
         for val in (x, y, z, r):
-            # if isinstance(val, DeferredVal):
-            #     initArg.append(val)
-            # else:
-            #     initArg.append(DeferredVal(val))
-            initArg.append(DeferredVal(val))
+            initArg.append(val)
         super().__init__(initArg)
 
     def __str__(self):
         retList = []
-        for id, deferredVal in zip(("X", "Y", "Z", "R"), self):
-            val = deferredVal.val
+        for id, val in zip(("X", "Y", "Z", "R"), self):
             if val is not None:
                 retList.append("{}{:.5f}".format(id, val))
         return " ".join(retList)
@@ -222,31 +221,6 @@ class Tool(object):
         self.cutDiameter = cutDiameter
         self.shankDiameter = shankDiameter
 
-class DeferredVal(object):
-    def __init__(self, val):
-        super().__init__()
-        if isinstance(val, DeferredVal):
-            self._val = val._val
-        else:
-            self._val = val
-
-    def __add__(self, other):
-        return DeferredVal(lambda: self.val + DeferredVal(other).val )
-    
-    # def __str__(self):
-    #     return str(self.val)
-    
-    @property
-    def val(self):
-        if callable(self._val):
-            return self._val()
-        else:
-            return self._val
-        
-    @val.setter
-    def val(self, arg):
-        self._val = arg
-        
 class CncMachineConfig(object):
     def __init__(self,
                  tool,
@@ -278,10 +252,14 @@ def demo(argv):
     cncCfg = CncMachineConfig(tool=Tool(cutDiameter=(1 / 8) * mmPerInch),
                               zSafe=50,
                               )
-    asm = asm_file("demo", cncCfg, )
+    asm = asm_file(name="demo", cncCfg=cncCfg, )
     asm += asm_drillHole(
         xCenter=10, yCenter=20, 
         zTop=0, zBottom=-30,
+        )
+    asm += asm_drillHole(
+        xCenter=21, yCenter=11, 
+        zTop=0, zBottom=-20,
         )
     log.info("*****\n{}\n".format(asm))
     log.info("*****\n{}\n".format(asm.getGcode()))
