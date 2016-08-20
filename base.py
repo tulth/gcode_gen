@@ -137,6 +137,8 @@ class Assembly(object):
         return self
     
     def __exit__(self, *exc):
+        if exc[0] is not None:
+            return False
         self.elab()
         return False
     
