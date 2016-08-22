@@ -790,17 +790,17 @@ Recommend a final pass around the perimeter, and corner dogbones if needed.
             overlap = self.cncCfg["defaultMillingOverlap"]
         cutDia = self.cncCfg["tool"].cutDiameter
         ySteps = calcZigZagSteps(yBottom, yBottom + yHeight, cutDia, overlap)
-        log.info("ySteps: {}".format(ySteps))
+        log.debug("ySteps: {}".format(ySteps))
         yParams = [yFractXStartEnd[0] * yHeight for yFractXStartEnd in yFractXStartEnds]
         xStartParams = [yFractXStartEnd[1] for yFractXStartEnd in yFractXStartEnds]
         xStopParams = [yFractXStartEnd[2] for yFractXStartEnd in yFractXStartEnds]
-        log.info("yParams: {}".format(yParams))
-        log.info("xStartParams: {}".format(xStartParams))
-        log.info("xStopParams: {}".format(xStopParams))
+        log.debug("yParams: {}".format(yParams))
+        log.debug("xStartParams: {}".format(xStartParams))
+        log.debug("xStopParams: {}".format(xStopParams))
         xStartSteps = np.interp(ySteps, yParams, xStartParams)
         xStopSteps = np.interp(ySteps, yParams, xStopParams)
-        log.info("xStartSteps: {}".format(xStartSteps))
-        log.info("xStopSteps: {}".format(xStopSteps))
+        log.debug("xStartSteps: {}".format(xStartSteps))
+        log.debug("xStopSteps: {}".format(xStopSteps))
         # import matplotlib.pyplot as plt
         # plt.plot(xStartParams, yParams, 'o')
         # plt.plot(xStartSteps, ySteps, '-x')
@@ -811,7 +811,7 @@ Recommend a final pass around the perimeter, and corner dogbones if needed.
         # FIXME ADDME self += cmd_g1(z=cutZ)
         yIter = iter(ySteps)
         for xCoord, yCoord in zip(serpentIter(xStartSteps, xStopSteps), twiceIter(ySteps)):
-            log.info("xCoord, yCoord: {}, {}".format(xCoord, yCoord))
+            log.debug("xCoord, yCoord: {}, {}".format(xCoord, yCoord))
             self += cmd_g1(x=xCoord, y=yCoord)
         self += cmd_g0(z=self.cncCfg["zSafe"])
 
