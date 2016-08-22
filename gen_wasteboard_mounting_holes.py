@@ -1,9 +1,12 @@
 #!/usr/bin/env python
-"""Generates gcode for drilling new wasteboard mounting holes"""
+"""Generates gcode for drilling new nomad 883 wasteboard mounting holes"""
 import sys
 from base import *
 
 argDoc = "measured wasteboard thickness in mm"
+
+GCODE_OUT_FILE_NAME = "wasteboard_mounting_holes.gcode"
+SCAD_OUT_FILE_NAME = "wasteboard_mounting_holes.scad"
 
 class asm_mountingHoleCut(Assembly):
     def _elab(self, xCenter, yCenter,
@@ -14,32 +17,23 @@ class asm_mountingHoleCut(Assembly):
         if overlap is None:
             overlap = self.cncCfg["defaultMillingOverlap"]
         ballPointRadius = self.cncCfg["tool"].cutDiameter / 2
-        # self += asm_drillHole(xCenter, yCenter,
-        #                       zTop=workpieceThickness+self.cncCfg["zMargin"],
-        #                       zBottom=shoulderThickness, )
-        # self += asm_drillHole(xCenter, yCenter,
-        #                       zTop=shoulderThickness, zBottom=0-ballPointRadius-self.cncCfg["zMargin"],
-        #                       )
-        
-        self += cmd_g0(z=workpieceThickness + self.cncCfg["zMargin"])
         self += asm_cylinderCut(xCenter, yCenter,
                                zTop=workpieceThickness,
                                zBottom=shoulderThickness,
-                               desiredDiameter=wideDiameter,
+                               diameter=wideDiameter,
                                overlap=overlap)
         self += asm_cylinderCut(xCenter, yCenter,
                                zTop=shoulderThickness,
                                zBottom=0-ballPointRadius,
-                               desiredDiameter=narrowDiameter,
+                               diameter=narrowDiameter,
                                overlap=overlap)
-        self += cmd_g0(z=workpieceThickness + self.cncCfg["zMargin"])
+        self += cmd_g0(z=self.cncCfg["zSafe"])
 
 def gen_wasteboard_mounting_holes(wasteboardThickness):
     toolDia = (1 / 8) * mmPerInch
     comments = []
-    ofn = "wasteboard_mounting_holes.gcode"
     comments.append("""Measure NEW wasteboard thickness, for example: 0.506", 0.506", 0.5055", 0.505" = 12.8429 mm""")
-    comments.append("""run: {} [{}]> {}""".format(__file__, argDoc, ofn))
+    comments.append("""run: {} [{}] """.format(__file__, argDoc))
     comments.append("""start bCNC""")
     comments.append("""Switch bit to {}" flat nose bit""".format(toolDia / mmPerInch))
     comments.append("""$H home the machine""")
@@ -54,11 +48,11 @@ def gen_wasteboard_mounting_holes(wasteboardThickness):
     comments.append("""Zero Z""")
     comments.append("""$H home the machine""")
     comments.append("""tape down the new wasteboard""")
-    comments.append("""open {} in bCNC""".format(ofn))
+    comments.append("""open {} in bCNC""".format(GCODE_OUT_FILE_NAME))
         
     tool=Tool(cutDiameter=toolDia)
     cncCfg = CncMachineConfig(tool,
-                              zSafe=20,
+                              zSafe=40,
                               )
     #
     holeDepth = 0.35 * mmPerInch
@@ -101,8 +95,13 @@ def parseArgs(argv):
 
 def main(argv):
     cfg = parseArgs(argv)
-    alignHolesAsm = gen_wasteboard_mounting_holes(cfg.WASTEBOARD_THICKNESS_IN_MM)
-    print(alignHolesAsm.getGcode())
+    topAsm = gen_wasteboard_mounting_holes(cfg.WASTEBOARD_THICKNESS_IN_MM)
+    with open(SCAD_OUT_FILE_NAME, 'w') as ofp:
+        ofp.write(topAsm.genScad())
+    log.info("wrote {}".format(SCAD_OUT_FILE_NAME))
+    with open(GCODE_OUT_FILE_NAME, 'w') as ofp:
+        ofp.write(topAsm.genGcode())
+    log.info("wrote {}".format(GCODE_OUT_FILE_NAME))
     return 0
 
 if __name__ == "__main__":

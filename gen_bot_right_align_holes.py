@@ -1,6 +1,10 @@
 #!/usr/bin/env python
+"""Generates gcode for drilling nomad 883 bottom right alignment pin holes"""
 import sys
 from base import *
+
+GCODE_OUT_FILE_NAME = "bot_right_align_holes.gcode"
+SCAD_OUT_FILE_NAME = "bot_right_align_holes.scad"
 
 def gen_bot_right_align_holes():
     toolDia = (1 / 8) * mmPerInch
@@ -34,8 +38,13 @@ def gen_bot_right_align_holes():
 
 
 def main(args):
-    alignHolesAsm = gen_bot_right_align_holes()
-    print(alignHolesAsm.getGcode())
+    topAsm = gen_bot_right_align_holes()
+    with open(SCAD_OUT_FILE_NAME, 'w') as ofp:
+        ofp.write(topAsm.genScad())
+    log.info("wrote {}".format(SCAD_OUT_FILE_NAME))
+    with open(GCODE_OUT_FILE_NAME, 'w') as ofp:
+        ofp.write(topAsm.genGcode())
+    log.info("wrote {}".format(GCODE_OUT_FILE_NAME))
     return 0
 
 if __name__ == "__main__":
