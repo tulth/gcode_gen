@@ -9,8 +9,10 @@ import sys
 import logging
 import argparse
 import collections
+import itertools
+import operator
 import numpy as np
-from numpy.linalg import norm
+from numpy.linalg import norm, det
 
 import gen_scad
 
@@ -412,7 +414,7 @@ class asm_drillHole(Assembly):
         self += cmd_g0(z=self.cncCfg["zSafe"])
 
 def floatEq(floatA, floatB, epsilon=EPSILON):
-    return abs(floatA - floatB) > EPSILON    
+    return abs(floatA - floatB) > EPSILON
 
 def calcZSteps(zTop, zBottom, depthPerPass):
     zCutList = [zTop]
@@ -505,7 +507,7 @@ class point(np.ndarray):
         for idx, val in enumerate(self):
             if val is None:
                 self[idx] = prevPoint[idx]
-        
+
     def compress(self, prevPoint):
         for idx, val in enumerate(self):
             if prevPoint[idx] is None:
@@ -646,7 +648,7 @@ def deltaPhi(u, v):
     # c = np.dot(u, v) / (norm(u) * norm(v)) # -> cosine of the angle
     # phi = np.arccos(np.clip(c, -1, 1))
     # return phi
-              
+
 def arc2segmentsFindCenter(p0, p1, r, clockwise=True):
     if clockwise:
         direction = -1
@@ -672,7 +674,7 @@ def safeCeil(arg, epsilon=EPSILON):
         return int(round(arg))
     else:
         return int(np.ceil(arg))
-    
+
 assert safeCeil(3.999999) == 4
 assert safeCeil(4.00000001) == 4
 assert safeCeil(4.1) == 5
@@ -745,7 +747,7 @@ def arc2segments(p0, p1, r, segmentPerCircle=16, clockwise=True):
 def calcZigZagSteps(start, stop, cutDia, overlap):
     stepList = [start]
     workStep = cutDia * (1 - overlap)
-    numSteps = safeCeil((stop-start) / workStep)
+    numSteps = safeCeil((stop-start) / workStep) + 1
     stepList = np.linspace(start, stop, numSteps)
     # for cutNum in range(int((stop - start) / workStep)):
     #     stepList += [start + ((cutNum + 1) * workStep)]
@@ -816,6 +818,157 @@ Recommend a final pass around the perimeter, and corner dogbones if needed.
         self += cmd_g0(z=self.cncCfg["zSafe"])
 
 
+HEXAGON = np.asarray(
+    # ((0,    0, ),
+    #  (1,    0, ),       
+    #  (1.5,  np.sqrt(3)/2, ),
+    #  (1,    np.sqrt(3), ),
+    #  (0,    np.sqrt(3), ),
+    #  (-0.5, np.sqrt(3)/2, ), 
+    # ((-0.5,    -np.sqrt(3)/2, ),
+    #  ( 0.5,    -np.sqrt(3)/2, ),
+    #  ( 1,      0, ),       
+    #  ( 0.5,     np.sqrt(3)/2, ),
+    #  (-0.5,     np.sqrt(3)/2, ),
+    #  (-1,      0, ),       
+    # )) / (np.sqrt(3)/2) / 2
+    ((-np.sqrt(3)/6,    -1/2, ),
+     ( np.sqrt(3)/6,    -1/2, ),
+     ( np.sqrt(3)/3,     0, ),       
+     ( np.sqrt(3)/6,     1/2, ),
+     (-np.sqrt(3)/6,     1/2, ),
+     (-np.sqrt(3)/3,     0, ),       
+    ))
+
+SQUARE = np.asarray(
+    ((-0.5,   -0.5, ),
+     ( 0.5,   -0.5, ),       
+     ( 0.5,    0.5, ),
+     (-0.5,    0.5, ),
+    ))
+
+EQUILATERAL_TRIANGLE = np.asarray(
+    ((0,    0, ),
+     (1,    0, ),       
+     (.5,   np.sqrt(2)/2, ),
+    ))
+
+def findBotLeftVertexIdx(vertices):
+    botLeftIdx = None
+    for idx, (x, y) in enumerate(reversed(vertices)):            
+        if botLeftIdx is None:
+            botLeftIdx = idx
+        else:
+            # print("botLeft: {}, x,y: {}, {}".format(botLeft, x, y))
+            if y < vertices[botLeftIdx][1]:
+                botLeftIdx = idx
+            elif y == vertices[botLeftIdx][1]:
+                if x < vertices[botLeftIdx][0]:
+                    botLeftIdx = idx
+    return botLeftIdx
+
+def monotone_increasing(lst):
+    pairs = zip(lst, lst[1:])
+    return all(itertools.starmap(operator.le, pairs))
+
+def monotone_decreasing(lst):
+    pairs = zip(lst, lst[1:])
+    return all(itertools.starmap(operator.ge, pairs))
+
+def monotone(lst):
+    return monotone_increasing(lst) or monotone_decreasing(lst)
+
+def isClockwiseVertexList(vertices):
+    oMat = np.concatenate((np.ones((3, 1)), vertices[0:3]), axis=1)
+    return det(oMat) < 0
+
+class asm_filledConvexPolygon(Assembly):
+    def _elab(self,
+              vertices,
+              overlap=None,
+              z=None):
+        if overlap is None:
+            overlap = self.cncCfg["defaultMillingOverlap"]
+        cutDia = self.cncCfg["tool"].cutDiameter
+        if not isClockwiseVertexList(vertices):
+            vertices = np.flipud(vertices)
+        botLeftIdx = findBotLeftVertexIdx(vertices)
+        topIdx = None
+        for idx, vertex in enumerate(vertices):
+            if topIdx is None or vertex[1] > vertices[topIdx][1]:
+                topIdx = idx
+        ySteps = calcZigZagSteps(vertices[botLeftIdx][1], vertices[topIdx][1], cutDia, overlap)
+        faceGroups = {"left": [], "right": []}
+        curGroup = "left"
+        for num in range(len(vertices)):
+            idx = (num + botLeftIdx) % len(vertices)
+            prevIdx = (idx - 1) % len(vertices)
+            faceGroups[curGroup].append(idx)
+            if idx == topIdx:
+                curGroup = "right"
+                faceGroups[curGroup].append(idx)
+        faceGroups[curGroup].append(botLeftIdx)
+        xSteps2Lists = []
+        for faceGroupName in faceGroups:
+            faceGroup = faceGroups[faceGroupName]
+            xParams = [vertices[idx][0] for idx in faceGroup]
+            yParams = [vertices[idx][1] for idx in faceGroup]
+            assert monotone(yParams)
+            if monotone_decreasing(yParams):
+                xParams = list(reversed(xParams))
+                yParams = list(reversed(yParams))
+            xSteps = np.interp(ySteps, yParams, xParams)
+            xSteps2Lists.append(xSteps)
+        xStartSteps = [min(x0, x1) for x0, x1 in zip(xSteps2Lists[0], xSteps2Lists[1], )]
+        xStopSteps = [max(x0, x1) for x0, x1 in zip(xSteps2Lists[0], xSteps2Lists[1], )]
+        self += cmd_g0(*vertices[botLeftIdx])
+        if z is not None:
+            self += cmd_g0(z=z)
+        yIter = iter(ySteps)
+        for xCoord, yCoord in zip(serpentIter(xStartSteps, xStopSteps), twiceIter(ySteps)):
+            log.debug("xCoord, yCoord: {}, {}".format(xCoord, yCoord))
+            self += cmd_g1(x=xCoord, y=yCoord)
+        # now walk the perimeter
+        for vertex in vertices:
+            self += cmd_g1(*vertex)
+        self += cmd_g1(*vertices[0])
+        
+class asm_filledHexagon(Assembly):
+    """Perform a Back and forth scanline-like cut pattern of a filled hexagon shape.
+               ___     _____
+                |     /     \
+                |    /       \
+faceToFaceDistance  (         )
+                |    \       /
+               _|_    \_____/
+                      /\ 
+                      ||
+                    (0, 0)
+
+"""
+    def _elab(self,
+              faceToFaceDistance,
+              overlap=None):
+        if overlap is None:
+            overlap = self.cncCfg["defaultMillingOverlap"]
+        cutDia = self.cncCfg["tool"].cutDiameter
+        sideLen = faceToFaceDistance / np.sqrt(3)
+        yFractXStartEnds = ((0,    0,             sideLen),       # at start height 0, cut from 0 to 1
+                            (0.5, -0.5 * sideLen, 1.5 * sideLen), # at half  height, cut from -0.5 to 1.5
+                            (1.0,  0,             sideLen),       # at end   height, cut from 0 to 1
+                            )
+        self += asm_interpolatedSerpentineCut(
+            yBottom=0,
+            yHeight=faceToFaceDistance,
+            yFractXStartEnds=yFractXStartEnds,
+            overlap=overlap)
+        # finish the perimeter
+        self += cmd_g1(x=yFractXStartEnds[1][1], y=0.5*faceToFaceDistance)
+        self += cmd_g1(x=0, y=0)
+        self += cmd_g1(x=sideLen, y=0)
+        self += cmd_g1(x=yFractXStartEnds[1][2], y=0.5*faceToFaceDistance)
+        self += cmd_g1(x=sideLen, y=faceToFaceDistance)
+
 def arc2segmentsDemo():
     offset = np.asarray([0, 0], dtype=float)
     p0 = np.asarray([-21.11125, -167.30000], dtype=float) + offset
@@ -833,6 +986,59 @@ def arc2segmentsDemo():
     p0 = np.asarray([0, -1], dtype=float) + offset
     p1 = np.asarray([-1, 0], dtype=float) + offset
     arc2segments(p0, p1, 1)
-    
+
+def insideVertices(vertices, toolCutDia):
+    flipped = False
+    if not isClockwiseVertexList(vertices):
+        vertices = np.flipud(vertices)
+        flipped = True
+    result = np.copy(vertices)
+    print(vertices)
+    shape2x = np.concatenate((vertices, vertices))
+    for idx in range(len(vertices)):
+        vertexList = shape2x[idx:idx+3, :]
+        print(vertexList)
+        vecCW = vertexList[2, :] - vertexList[1, :]
+        vecCCW = vertexList[0, :] - vertexList[1, :]
+        angle = np.arccos(np.clip(np.dot(vecCW, vecCCW)/(norm(vecCW)*norm(vecCCW)), -1.0, 1.0))
+        innerAngle = angle - np.pi / 2
+        print("innerAngle: {}".format(innerAngle / np.pi * 180))
+        # topLen = toolCutDia / np.sin(angle)
+        u_vecCW = vecCW / norm(vecCW)
+        u_vecCCW = vecCCW / norm(vecCCW)
+        topLen = toolCutDia / np.sqrt(1 - (np.dot(u_vecCW, u_vecCCW))**2)
+        print("topLen: {}".format(topLen))
+        import matplotlib.pyplot as plt
+        ax = plt.axes()
+        ax.arrow(0, 0, vecCW[0], vecCW[1], head_width=0.05, head_length=0.1, fc='b', ec='b')
+        ax.arrow(0, 0, vecCCW[0], vecCCW[1], head_width=0.05, head_length=0.1, fc='r', ec='r')
+        cwMoveVec = np.asarray((vecCW[1], -vecCW[0]))
+        cwMoveVec = cwMoveVec / norm(cwMoveVec) * toolCutDia
+        ax.arrow(0, 0, cwMoveVec[0], cwMoveVec[1], head_width=0.05, head_length=0.1, fc='c', ec='c')
+        ccwMoveVec = np.asarray((-vecCCW[1], vecCCW[0]))
+        ccwMoveVec = ccwMoveVec / norm(ccwMoveVec) * toolCutDia
+        ax.arrow(0, 0, ccwMoveVec[0], ccwMoveVec[1], head_width=0.05, head_length=0.1, fc='m', ec='m')
+        correctionVecLength = topLen
+        correctionVec = (u_vecCW + u_vecCCW) * correctionVecLength
+        print("correctionVec: {}".format(correctionVec))
+        result[(idx+1) % len(vertices), :] += correctionVec
+        ax.arrow(0, 0, correctionVec[0], correctionVec[1], head_width=0.05, head_length=0.1, fc='g', ec='g')
+        ax.arrow(cwMoveVec[0], cwMoveVec[1], vecCW[0], vecCW[1], head_width=0.05, head_length=0.1, fc='b', ec='b')
+        ax.arrow(cwMoveVec[0], cwMoveVec[1], -vecCW[0], -vecCW[1], head_width=0.05, head_length=0.1, fc='b', ec='b')
+        ax.arrow(ccwMoveVec[0], ccwMoveVec[1], vecCCW[0], vecCCW[1], head_width=0.05, head_length=0.1, fc='r', ec='r')
+        ax.arrow(ccwMoveVec[0], ccwMoveVec[1], -vecCCW[0], -vecCCW[1], head_width=0.05, head_length=0.1, fc='r', ec='r')
+        plt.plot(vecCW[0], vecCW[1], 'bx')
+        plt.plot(vecCCW[0], vecCCW[1], 'rx')
+        plt.plot([0], [0], 'kx')
+        plt.axes().set_aspect('equal')
+        plt.xlim(-10, 10)
+        plt.ylim(-10, 10)
+        plt.show()
+    if flipped:
+        result = np.flipud(result)
+    return result
+
 if __name__ == '__main__':
     sys.exit(demo(sys.argv))
+
+    

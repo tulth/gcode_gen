@@ -11,6 +11,7 @@ module gcp(os) {
   translate(os)
     cylinder(h=0.75*25.4, d=0.125*25.4);
     // cylinder(h=0.75*25.4, d=0.05*25.4);
+    // cylinder(h=0.75*25.4, d=0.001*25.4);
 }
      
 module gcpp(offset1, offset2) {
