@@ -39,6 +39,17 @@ EQUILATERAL_TRIANGLE = np.asarray(
      (.5,   np.sqrt(2)/2, ),
     ))
 
+
+from . import arc2segments
+def poly_circle_verts(segmentPerCircle=32):
+    return np.asarray(arc2segments.arc2segments(np.asarray((0, 0.5)),
+                                                np.asarray((0, -0.5)),
+                                                0.5, segmentPerCircle, clockwise=True) +
+                      arc2segments.arc2segments(np.asarray((0, -0.5)),
+                                                np.asarray((0, 0.5)),
+                                                0.5, segmentPerCircle, clockwise=True)
+                      )
+
 class BaseShape(assembly.Assembly):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

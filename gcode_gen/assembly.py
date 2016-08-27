@@ -15,6 +15,7 @@ class Assembly(object):
                 del self.kwargs[argName]
         self.transforms = hg_coords.TransformList()
         self._init(**baseKwargs)
+        self.elaborated = False
 
     def _init(self, name=None, cncCfg=None, ):
         if name is None:
@@ -26,15 +27,6 @@ class Assembly(object):
     def last(self):
         return self.children[-1]
     
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        if exc[0] is not None:
-            return False
-        self.elab()
-        return False
-
     def defaultName(self):
         return self.__class__.__name__
 
@@ -43,13 +35,8 @@ class Assembly(object):
 
     def __iadd__(self, other):
         self.checkType(other)
-        # self.children.append(other)
-        # if isinstance(other, Assembly):
-        #     other.cncCfg = self.cncCfg
-        #     other.elab()
         if isinstance(other, Assembly):
-            with other:
-                other.cncCfg = self.cncCfg
+            other.cncCfg = self.cncCfg
         self.children.append(other)
         return self
 
@@ -70,6 +57,7 @@ class Assembly(object):
         return "\n".join(strList)
 
     def genGcode(self):
+        self.elab()
         flatAsm = self.getFlattened()
         return flatAsm.genGcode()
 
@@ -88,7 +76,15 @@ class Assembly(object):
         return flatAsm
 
     def elab(self):
-        self._elab(*self.args, **self.kwargs)
+        if self.elaborated:
+            return
+        else:
+            self.elaborated = True
+            self._elab(*self.args, **self.kwargs)
+            for child in self.children:
+                if isinstance(child, Assembly):
+                    child.transforms.extend(self.transforms)
+                    child.elab()
 
     def expand(self):
         for child in self.children:
@@ -180,20 +176,22 @@ class FileAsm(Assembly):
         for comment in comments:
             self += cmd.Comment(comment)
         self += HeaderAsm()
+        for child in self.children:
+            if isinstance(child, Assembly):
+                child.elab()
 
     def elab(self):
-        self += FooterAsm()
-        self.expand()
-        self.compress()
-
-    def expand(self):
         self.cncCfg["lastPosition"] = number.point(0, 0, 70)  # homed at x/y=0, but z is indeterminate, estimating 70
         self.cncCfg["lastFeedRate"] = -1
-        super().expand()
-
-    def genScad(self):
+        super().elab()
         self.expand()
         self.compress()
+        
+    def _elab(self):
+        self += FooterAsm()
+
+    def genScad(self):
+        self.elab()
         self.expand()
         self.cncCfg["lastPosition"] = number.point(0, 0, 70)  # homed at x/y=0, but z is indeterminate, estimating 70
         self.cncCfg["lastFeedRate"] = -1
@@ -201,11 +199,6 @@ class FileAsm(Assembly):
         result = scad.genScad(pointPairList)
         self.compress()
         return result
-
-    def compress(self):
-        self.cncCfg["lastPosition"] = number.point(0, 0, 70)  # homed at x/y=0, but z is indeterminate, estimating 70
-        self.cncCfg["lastFeedRate"] = -1
-        super().compress()
 
 
 class FlattenedAssemblyEntry(cmd.BaseCmd):
