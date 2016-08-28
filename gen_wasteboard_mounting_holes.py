@@ -39,7 +39,7 @@ class MountingHoleCut(gc.assembly.Assembly):
         self += gc.cmd.G0(self.center[0], self.center[1], )
         self += gc.cmd.G0(z=self.cncCfg["zSafe"])
 
-def gen_wasteboard_mounting_holes(wasteboardThickness):
+def gen_wasteboard_mounting_holes(wasteboardThickness, scadMain):
     toolDia = (1 / 8) * gc.number.mmPerInch
     comments = []
     comments.append("""Measure NEW wasteboard thickness, for example: 0.506", 0.506", 0.5055", 0.505" = 12.8429 mm""")
@@ -73,7 +73,7 @@ def gen_wasteboard_mounting_holes(wasteboardThickness):
         (-79.25, -106.4),
         )
 
-    asmFile = gc.assembly.FileAsm(name=__doc__, cncCfg=cncCfg, comments=comments)
+    asmFile = gc.assembly.FileAsm(name=__doc__, cncCfg=cncCfg, comments=comments, scadMain=scadMain)
     for center in centers:
         asmFile += MountingHoleCut(wideDiameter=10.16,
                                    narrowDiameter=7,
@@ -97,16 +97,25 @@ def parseArgs(argv):
     cfg = parser.parse_args()
     return cfg
 
+def genScadMain(workpieceThickness):
+    scadMainStr = """
+module workpiece() {
+  translate([-199.9, -208, 0]) 
+  """ + "cube([{sx}, {sy}, {sz}]);".format(sx=8 * 25.4, sy=8 * 25.4, sz=workpieceThickness) + """
+}
+""" + gc.scad.result_main
+    return scadMainStr
 def main(argv):
     cfg = parseArgs(argv)
-    topAsm = gen_wasteboard_mounting_holes(cfg.WASTEBOARD_THICKNESS_IN_MM)
+    scadMainStr = genScadMain(cfg.WASTEBOARD_THICKNESS_IN_MM)
+    topAsm = gen_wasteboard_mounting_holes(cfg.WASTEBOARD_THICKNESS_IN_MM, scadMain=scadMainStr)
     with open(SCAD_OUT_FILE_NAME, 'w') as ofp:
         ofp.write(topAsm.genScad())
     log.info("wrote {}".format(SCAD_OUT_FILE_NAME))
     with open(GCODE_OUT_FILE_NAME, 'w') as ofp:
         ofp.write(topAsm.genGcode())
     log.info("wrote {}".format(GCODE_OUT_FILE_NAME))
-    print(topAsm)
+    #print(topAsm)
     return 0
 
 if __name__ == "__main__":
