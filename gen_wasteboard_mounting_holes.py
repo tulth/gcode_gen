@@ -19,7 +19,7 @@ SCAD_OUT_FILE_NAME = "wasteboard_mounting_holes.scad"
 
 
 class MountingHoleCut(gc.assembly.Assembly):
-    def _elab(self, xCenter, yCenter,
+    def _elab(self,
               wideDiameter, narrowDiameter,
               workpieceThickness,
               shoulderThickness,
@@ -28,13 +28,15 @@ class MountingHoleCut(gc.assembly.Assembly):
         if overlap is None:
             overlap = self.cncCfg["defaultMillingOverlap"]
         self += gc.cmd.G0(z=self.cncCfg["zSafe"])
-        self += gc.cmd.G0()
-        self += gc.cuts.Cylinder(depth=workpieceThickness - shoulderThickness,
-                                 diameter=wideDiameter,
-                                 overlap=overlap).translate(xCenter, yCenter, z=workpieceThickness)
-        self += gc.cuts.Cylinder(depth=shoulderThickness- zExtraDepthForLessTearOut,
-                                 diameter=narrowDiameter,
-                                 overlap=overlap).translate(xCenter, yCenter, z=shoulderThickness)
+        self += gc.cmd.G0(self.center[0], self.center[1], )
+        self += gc.cut.Cylinder(depth=workpieceThickness - shoulderThickness,
+                                diameter=wideDiameter,
+                                overlap=overlap).translate(z=workpieceThickness)
+        self += gc.cut.Cylinder(depth=shoulderThickness + zExtraDepthForLessTearOut,
+                                diameter=narrowDiameter,
+                                overlap=overlap,
+                                zMargin=0).translate(z=shoulderThickness)
+        self += gc.cmd.G0(self.center[0], self.center[1], )
         self += gc.cmd.G0(z=self.cncCfg["zSafe"])
 
 def gen_wasteboard_mounting_holes(wasteboardThickness):
@@ -63,25 +65,20 @@ def gen_wasteboard_mounting_holes(wasteboardThickness):
                                          zSafe=40,
                                          )
     #
-    holeDepth = 0.35 * gc.number.mmPerInch
-    botRight = (-20, -180)
     centers = (
-        (0, 0),
-        # (-9.4, -17.5),
-        # (-187.2, -17.5),
-        # (-9.4, -195.3),
-        # (-187.2, -195.3),
-        # (-79.25, -106.4),
+        (-9.4, -17.5),
+        (-187.2, -17.5),
+        (-9.4, -195.3),
+        (-187.2, -195.3),
+        (-79.25, -106.4),
         )
 
     asmFile = gc.assembly.FileAsm(name=__doc__, cncCfg=cncCfg, comments=comments)
     for center in centers:
-        cx, cy = center[0], center[1]
-        asmFile += MountingHoleCut(cx, cy,
-                                   wideDiameter=10.16,
+        asmFile += MountingHoleCut(wideDiameter=10.16,
                                    narrowDiameter=7,
                                    workpieceThickness=wasteboardThickness,
-                                   shoulderThickness=2.762)
+                                   shoulderThickness=2.762).translate(*center)
     return asmFile
 
 
@@ -109,6 +106,7 @@ def main(argv):
     with open(GCODE_OUT_FILE_NAME, 'w') as ofp:
         ofp.write(topAsm.genGcode())
     log.info("wrote {}".format(GCODE_OUT_FILE_NAME))
+    print(topAsm)
     return 0
 
 if __name__ == "__main__":

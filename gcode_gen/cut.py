@@ -1,3 +1,4 @@
+import numpy as np
 from . import assembly
 from . import number
 from . import cmd
@@ -44,7 +45,6 @@ class ConvexPolygon(assembly.Assembly):
               zMargin=None,
               ):
         self.vertices = vertex.standardizedConvexPolygonVertices(self.transforms.doTransform(vertices))
-        self.transforms = hg_coords.TransformList() # already did transform, don't transform children
         self.depth = depth
         self.isOutline = isOutline
         self.isFilled = isFilled
@@ -62,12 +62,14 @@ class ConvexPolygon(assembly.Assembly):
                                                                    self.isOutline,
                                                                    toolCutDiameter)
         #
-        self += cmd.G0(*self.correctedVertices[0][0:2])
-        zTop = self.correctedVertices[0][2]
-        zBottom = zTop - depth
-        zStart = zTop + self.cncCfg["zMargin"]
+        self += cmd.G0(x=self.center[0], y=self.center[1])
+        # zTop = self.correctedVertices[0][2]
+        # zBottom = zTop - depth
+        zStart = self.center[2] + zMargin
         self += cmd.G0(z=zStart)
-        zCutSteps = number.calcZSteps(zStart, zBottom, self.cncCfg["defaultDepthPerMillingPass"])
+        # zCutSteps = number.calcZSteps(zStart, zBottom, self.cncCfg["defaultDepthPerMillingPass"])
+        zCutSteps = number.calcZSteps(zMargin, -depth, self.cncCfg["defaultDepthPerMillingPass"])
+        print("zCutSteps: {}".format(zCutSteps))
         for zCutStep in zCutSteps:
             if isFilled:
                 self += shape.ConvexPolygonFill(self.correctedVertices, overlap=overlap).translate(z=zCutStep)
@@ -76,13 +78,9 @@ class ConvexPolygon(assembly.Assembly):
             else:
                 shp = shape.ConvexPolygonInsideDogbonePerimeter
                 self += shp(self.vertices).translate(z=zCutStep)
-        #     self += shape.ConvexPolygon(self.correctedVertices, isFilled, isCutPerimeter=isDogbone, overlap)
-        #     self.last.translate(z=zCutStep)
-        #     if not isDogbone:
-        #         for corner in gcode_gen.vertex.verticesToCornersIter(np.roll(v, 1, axis=0)):
-        #             vecCCW, vecCW = cornerToVectors(corner)
-        #             diag = (vecCCW + vecCW)
-        #             u_dogboneDir = -toUnitVec(diag)
+        # already did transforms on verts, before passing to children so don't transform children!
+        self += cmd.G0(x=self.center[0], y=self.center[1])
+        self.transforms = hg_coords.TransformList() 
                 
 
     def calcOutlineCorrectedVertices(self, vertices, isOutline, toolCutDiameter):
@@ -93,3 +91,20 @@ class ConvexPolygon(assembly.Assembly):
         return result
             
 
+def Cylinder(depth,
+             diameter,
+             overlap=None,
+             zMargin=None,
+             segmentPerCircle=32):
+    verts = shape.poly_circle_verts(segmentPerCircle)
+    cyl = ConvexPolygon(vertices=verts,
+                        depth=depth,
+                        isFilled=True,
+                        isOutline=False,
+                        isDogbone=False,
+                        overlap=overlap,
+                        zMargin=zMargin,
+                        ).scale(sx=diameter/2, sy=diameter/2)
+    return cyl
+    
+    

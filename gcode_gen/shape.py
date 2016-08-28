@@ -76,7 +76,7 @@ class ConvexPolygonFill(BaseShape):
             xStarts.append(min(xInts))
             xStops.append(max(xInts))
             #print("yStep: {} xStart: {}, xStop: {}".format(yStep, xStarts[-1], xStops[-1]))
-        self += cmd.G0(*self.vertices[botLeftIdx])
+        self += cmd.G1(*self.vertices[botLeftIdx])
         for xCoord, yCoord in number.fillWalkIter(ySteps, xStarts, xStops):
             self += cmd.G1(x=xCoord, y=yCoord)
         # import sys
