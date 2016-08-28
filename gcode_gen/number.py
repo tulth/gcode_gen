@@ -5,12 +5,13 @@ import operator
 
 EPSILON = 1.0e-6
 mmPerInch = 25.4
+NUM2STR_FORMAT = "{:.5f}"
 
 def num2str(arg):
-    return "{:.5f}".format(arg)
+    return NUM2STR_FORMAT.format(arg)
 
 def floatEq(floatA, floatB, epsilon=EPSILON):
-    return abs(floatA - floatB) > EPSILON
+    return abs(floatA - floatB) < EPSILON
 
 def safeCeil(arg, epsilon=EPSILON):
     """Ceiling of arg, but if arg is within epsilon of an integer just return that int.
@@ -29,7 +30,14 @@ assert safeCeil(4.1) == 5
 
 def monotone_increasing(lst):
     pairs = zip(lst, lst[1:])
-    return all(itertools.starmap(operator.le, pairs))
+    for a, b in pairs:
+        if floatEq(a, b):
+            pass
+        else:
+            if a < b:
+                return False
+    return True
+#    return all(itertools.starmap(operator.le, pairs))
 
 def monotone_decreasing(lst):
     pairs = zip(lst, lst[1:])
@@ -37,10 +45,6 @@ def monotone_decreasing(lst):
 
 def monotone(lst):
     return monotone_increasing(lst) or monotone_decreasing(lst)
-
-def isClockwiseVertexList(vertices):
-    oMat = np.concatenate((np.ones((3, 1)), vertices[0:3]), axis=1)
-    return det(oMat) < 0
 
 def calcStepsWithMaxSpacing(start, stop, maxSpacing):
     # note: safeCeil(abs(stop-start) / maxSpacing) gives the number of intervals,
@@ -62,7 +66,6 @@ def calcFillSteps(start, stop, toolCutDiameter, overlap):
 def calcRSteps(desiredDiameter, toolCutDiameter, overlap):
     maxSpacing = calcEffectiveToolDiameter(toolCutDiameter, overlap)
     return calcStepsWithMaxSpacing(maxSpacing , desiredDiameter / 2 - maxSpacing / 2, maxSpacing)
-
 
 class point(np.ndarray):
     def __new__(cls, x=None, y=None, z=None):
@@ -99,22 +102,6 @@ class point(np.ndarray):
                     self[idx] = None
 
 
-def findBotLeftVertexIdx(vertices):
-    botLeftIdx = None
-    for idx, (x, y) in enumerate(vertices):
-        if botLeftIdx is None:
-            botLeftIdx = idx
-        else:
-            # print("botLeft: {}, x,y: {}, {}".format(botLeft, x, y))
-            if y < vertices[botLeftIdx][1]:
-                botLeftIdx = idx
-            elif y == vertices[botLeftIdx][1]:
-                if x < vertices[botLeftIdx][0]:
-                    botLeftIdx = idx
-        # print(x, y, idx, botLeftIdx, vertices[botLeftIdx], y < vertices[botLeftIdx][1], y == vertices[botLeftIdx][1])
-    return botLeftIdx
-
-
 def serpentIter(starts, stops):
     directionStartToStop = True
     for start, stop in zip(starts, stops):
@@ -126,8 +113,29 @@ def serpentIter(starts, stops):
             yield start
         directionStartToStop = not(directionStartToStop)
 
-def twiceIter(baseIter):
-    for val in baseIter:
+def twiceIter(argSequence):
+    for val in argSequence:
         yield val
         yield val
+
+def fillWalkIter(ySteps, xStartSteps, xStopSteps):
+    for xCoord, yCoord in zip(serpentIter(xStartSteps, xStopSteps), twiceIter(ySteps)):
+        yield xCoord, yCoord
+
+def pairwiseIter(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
+def allPlusFirstIter(arg):
+    iterArg = iter(arg)
+    firstElement = next(iterArg)
+    yield firstElement
+    for remaining in iterArg:
+        yield remaining
+    yield firstElement
+
+def loopPairsIter(vertices):
+    return pairwiseIter(allPlusFirstIter(vertices))
 

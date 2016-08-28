@@ -61,10 +61,6 @@ class Assembly(object):
         flatAsm = self.getFlattened()
         return flatAsm.genGcode()
 
-    def getScad(self):
-        flatAsm = self.getFlattened()
-        return flatAsm.genGcode()
-
     def getFlattened(self):
         flatAsm = FlattenedAssembly()
         flatAsm.append(FlattenedAssemblyEntry("({})".format(self.label)))
@@ -99,6 +95,7 @@ class Assembly(object):
                 self.cncCfg["lastPosition"] = child.point
 
     def genScad(self):
+        self.elab()
         pointPairList = []
         for child in self.children:
             if isinstance(child, Assembly):
@@ -129,8 +126,9 @@ class Assembly(object):
         self.children = [val for idx, val in enumerate(self.children) if idx not in childIdxsToPrune]
 
     def _elab(self):
-        """Define in subclass, it will get all __init__ args except name, cncCfg"""
-        raise NotImpementedError()
+        """Override in subclass, it will get all __init__ args except name, cncCfg"""
+        # raise NotImpementedError()
+        pass
 
     def translate(self, x=0, y=0, z=0):
         self.transforms.translate(x, y, z)
@@ -176,13 +174,23 @@ class FileAsm(Assembly):
         for comment in comments:
             self += cmd.Comment(comment)
         self += HeaderAsm()
-        for child in self.children:
-            if isinstance(child, Assembly):
-                child.elab()
+        # for child in self.children:
+        #     if isinstance(child, Assembly):
+        #         child.elab()
 
-    def elab(self):
+    def expand(self):
         self.cncCfg["lastPosition"] = number.point(0, 0, 70)  # homed at x/y=0, but z is indeterminate, estimating 70
         self.cncCfg["lastFeedRate"] = -1
+        super().expand()
+        
+    def compress(self):
+        self.cncCfg["lastPosition"] = number.point(0, 0, 70)  # homed at x/y=0, but z is indeterminate, estimating 70
+        self.cncCfg["lastFeedRate"] = -1
+        super().compress()
+        
+    def elab(self):
+        if self.elaborated:
+            return
         super().elab()
         self.expand()
         self.compress()
@@ -193,8 +201,6 @@ class FileAsm(Assembly):
     def genScad(self):
         self.elab()
         self.expand()
-        self.cncCfg["lastPosition"] = number.point(0, 0, 70)  # homed at x/y=0, but z is indeterminate, estimating 70
-        self.cncCfg["lastFeedRate"] = -1
         pointPairList = super().genScad()
         result = scad.genScad(pointPairList)
         self.compress()

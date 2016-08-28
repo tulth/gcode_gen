@@ -1,15 +1,9 @@
 from .number import point
-
-class Tool(object):
-    def __init__(self,
-                 cutDiameter,
-                 shankDiameter=3.175, ):
-        self.cutDiameter = cutDiameter
-        self.shankDiameter = shankDiameter
+from . import tool
 
 class CncMachineConfig(dict):
     def __init__(self,
-                 tool,
+                 bit,
                  zSafe,
                  spindleSpeed=10000,
                  defaultDepthPerMillingPass=0.4,
@@ -17,9 +11,9 @@ class CncMachineConfig(dict):
                  defaultDrillingFeedRate=20,
                  defaultMillingOverlap=0.15,
                  zMargin=2):
-        assert isinstance(tool, Tool)
+        assert isinstance(bit, tool.Tool)
         super().__init__()
-        self["tool"] = tool
+        self["tool"] = bit
         self["zSafe"] = zSafe
         self["spindleSpeed"] = spindleSpeed
         self["defaultDepthPerMillingPass"] = defaultDepthPerMillingPass
