@@ -4,6 +4,8 @@ import itertools
 import operator
 from . import number
 
+ZERO_VERTS = np.asarray(((0, 0, 0), ), dtype=float)
+
 def edgeEndPointCrossproductsIter(vertices):
     for edge in verticesToEdgesIter(vertices):
         yield np.cross(edge[0], edge[1])

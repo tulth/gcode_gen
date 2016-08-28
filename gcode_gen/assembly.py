@@ -2,6 +2,7 @@ from . import cmd
 from . import number
 from . import hg_coords
 from . import scad
+from . import vertex
 
 class Assembly(object):
     def __init__(self, *args, **kwargs):
@@ -23,6 +24,11 @@ class Assembly(object):
         self.name = name
         self.cncCfg = cncCfg
         self.children = []
+
+    @property
+    def center(self):
+        """only use this after elaboration!"""
+        return self.transforms.doTransform(vertex.ZERO_VERTS)[0]
         
     def last(self):
         return self.children[-1]
