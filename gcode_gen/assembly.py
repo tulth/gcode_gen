@@ -175,11 +175,12 @@ class FooterAsm(Assembly):
 
 
 class FileAsm(Assembly):
-    def __init__(self, name=None, cncCfg=None, comments=()):
+    def __init__(self, name=None, cncCfg=None, comments=(), scadMain=scad.default_main):
         super().__init__(name=name, cncCfg=cncCfg, )
         for comment in comments:
             self += cmd.Comment(comment)
         self += HeaderAsm()
+        self.scadMain = scadMain
         # for child in self.children:
         #     if isinstance(child, Assembly):
         #         child.elab()
@@ -208,7 +209,7 @@ class FileAsm(Assembly):
         self.elab()
         self.expand()
         pointPairList = super().genScad()
-        result = scad.genScad(pointPairList)
+        result = str(scad.genScad(pointPairList, self.cncCfg, self.scadMain))
         self.compress()
         return result
 

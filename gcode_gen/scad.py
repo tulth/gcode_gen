@@ -3,25 +3,33 @@ import sys
 
 header = """$fn=12;
 
-function offset(X=0, Y=0, Z=0) = [X,Y,Z];
-
-function negate(arg) = [-arg[0],-arg[1],-arg[2]];
-
-module gcp(os) {
-  translate(os)
-     cylinder(h=0.75*25.4, d=0.125*25.4);
-    //cylinder(h=0.75*25.4, d=0.05*25.4);
-    // cylinder(h=0.75*25.4, d=0.001*25.4);
-}
-     
 module gcpp(offset1, offset2) {
   hull () {
     gcp(offset1);
     gcp(offset2);
   }
 }
-module main () {
+"""
+toolpathStart = """
+module toolpath () {
   union() {
+"""
+
+toolpath_main = """
+module main () {
+  toolpath();
+}
+"""
+
+default_main = toolpath_main
+
+result_main = """
+module main () {
+  difference() {
+    workpiece();
+    toolpath(); 
+  }
+}
 """
 
 footer = """
@@ -31,15 +39,35 @@ footer = """
 main();
 """
 
-def genScad(pointPairs):
-    moveLines = []
-    for pointPair in pointPairs:
-        coordStr = "{}, {}".format(*pointPair)
-        coordStr = coordStr.replace("(", "[").replace(")", "]")
-        moveLines.append("    gcpp({});".format(coordStr))
-        
-    return "{}{}{}".format(header, "\n".join(moveLines), footer)
+class genScad(object):
+    def __init__(self, pointPairs, cncCfg, main=default_main):
+        self.rList = []
+        self.rList.append(header)
+        self.rList.extend(self.toolCSG(cncCfg["tool"]))
+        self.rList.append(main)
+        self.rList.append(toolpathStart)
+        self.rList.extend(self.toolMotions(pointPairs, cncCfg))
+        self.rList.append(footer)
 
+    def __str__(self):
+        return "\n".join(self.rList)
+
+    def toolMotions(self, pointPairs, cncCfg):
+        result = []
+        for pointPair in pointPairs:
+            coordStr = "{}, {}".format(*pointPair)
+            coordStr = coordStr.replace("(", "[").replace(")", "]")
+            result.append("    gcpp({});".format(coordStr))
+        return result
+        
+    def toolCSG(self, tool):
+        result = []
+        result.append("""module gcp(os) {""")
+        result.append("""translate(os)""")
+        result.append(tool.getScadModel())
+        result.append("""}""")
+        return result
+        
 
 def demo(argv):
     pointPairs = (((0, 0, 0), (1, 0, 0)),

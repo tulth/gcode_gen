@@ -69,7 +69,7 @@ class ConvexPolygon(assembly.Assembly):
         self += cmd.G0(z=zStart)
         # zCutSteps = number.calcZSteps(zStart, zBottom, self.cncCfg["defaultDepthPerMillingPass"])
         zCutSteps = number.calcZSteps(zMargin, -depth, self.cncCfg["defaultDepthPerMillingPass"])
-        print("zCutSteps: {}".format(zCutSteps))
+        # print("zCutSteps: {}".format(zCutSteps))
         for zCutStep in zCutSteps:
             if isFilled:
                 self += shape.ConvexPolygonFill(self.correctedVertices, overlap=overlap).translate(z=zCutStep)
