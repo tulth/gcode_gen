@@ -3,3 +3,5 @@
 *.nogit
 __pycache__
 .#*
+*.scad
+*.gcode
