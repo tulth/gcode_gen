@@ -100,15 +100,30 @@ class Assembly(object):
                     child.expand(self.cncCfg["lastPosition"])
                 self.cncCfg["lastPosition"] = child.point
 
-    def genScad(self):
+    def genPointPairList(self, skipNoMotion=True):
         self.elab()
         pointPairList = []
         for child in self.children:
             if isinstance(child, Assembly):
-                pointPairList.extend(child.genScad())
+                pointPairList.extend(child.genPointPairList())
             else:
-                pointPairList.extend(child.genScad(self.cncCfg["lastPosition"]))
+                pointPairList.extend(child.genPointPairList(self.cncCfg["lastPosition"]))
                 self.cncCfg["lastPosition"] = child.point
+        if skipNoMotion:
+            trimmedPointPairList = []
+            for pointPair in pointPairList:
+                noMotion = True
+                for val0, val1 in zip(*pointPair):
+                    if number.floatEq(val0, val1):
+                        pass
+                    else:
+                        noMotion = False
+                        break
+                if noMotion:
+                    pass
+                else:
+                    trimmedPointPairList.append(pointPair)
+            pointPairList = trimmedPointPairList
         return pointPairList
 
     def compress(self):
@@ -206,12 +221,17 @@ class FileAsm(Assembly):
         self += FooterAsm()
 
     def genScad(self):
+        toolPath = self.genScadToolPath()
+        result = str(scad.genScad(toolPath, self.cncCfg, self.name, self.scadMain))
+        return result
+
+    def genScadToolPath(self):
         self.elab()
         self.expand()
-        pointPairList = super().genScad()
-        result = str(scad.genScad(pointPairList, self.cncCfg, self.scadMain))
+        pointPairList = self.genPointPairList()
         self.compress()
-        return result
+        scadToolPath = self.cncCfg["tool"].genScadToolPath(pointPairList, self.name, )
+        return scadToolPath
 
 
 class FlattenedAssemblyEntry(cmd.BaseCmd):

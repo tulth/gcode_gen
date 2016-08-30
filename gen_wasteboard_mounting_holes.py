@@ -3,6 +3,7 @@
 import sys
 import argparse
 import logging
+from functools import partial
 
 import gcode_gen as gc
 
@@ -59,8 +60,8 @@ def gen_wasteboard_mounting_holes(wasteboardThickness, scadMain):
     comments.append("""$H home the machine""")
     comments.append("""tape down the new wasteboard""")
     comments.append("""open {} in bCNC""".format(GCODE_OUT_FILE_NAME))
-        
-    bit = gc.tool.Tool(cutDiameter=toolDia)
+
+    bit = gc.tool.Carbide3D_102()
     cncCfg = gc.machine.CncMachineConfig(bit,
                                          zSafe=40,
                                          )
@@ -73,7 +74,7 @@ def gen_wasteboard_mounting_holes(wasteboardThickness, scadMain):
         (-79.25, -106.4),
         )
 
-    asmFile = gc.assembly.FileAsm(name=__doc__, cncCfg=cncCfg, comments=comments, scadMain=scadMain)
+    asmFile = gc.assembly.FileAsm(name="gen_wasteboard_mounting_holes", cncCfg=cncCfg, comments=comments, scadMain=scadMain)
     for center in centers:
         asmFile += MountingHoleCut(wideDiameter=10.16,
                                    narrowDiameter=7,
@@ -97,18 +98,23 @@ def parseArgs(argv):
     cfg = parser.parse_args()
     return cfg
 
-def genScadMain(workpieceThickness):
-    scadMainStr = """
-module workpiece() {
-  translate([-199.9, -208, 0]) 
-  """ + "cube([{sx}, {sy}, {sz}]);".format(sx=8 * 25.4, sy=8 * 25.4, sz=workpieceThickness) + """
-}
-""" + gc.scad.result_main
-    return scadMainStr
+def genScadMainX(toolPathName, workpieceThickness):
+    result = []
+    result.append("module workpiece() {")
+    result.append("  translate([-199.9, -208, 0])")
+    result.append("  cube([{sx}, {sy}, {sz}]);".format(sx=8 * 25.4, sy=8 * 25.4, sz=workpieceThickness))
+    result.append("}")
+    result.append("")
+    result.extend(gc.scad.result_main(toolPathName))
+    return result
+
+
+
 def main(argv):
     cfg = parseArgs(argv)
-    scadMainStr = genScadMain(cfg.WASTEBOARD_THICKNESS_IN_MM)
-    topAsm = gen_wasteboard_mounting_holes(cfg.WASTEBOARD_THICKNESS_IN_MM, scadMain=scadMainStr)
+    genScadMain = partial(genScadMainX, workpieceThickness = cfg.WASTEBOARD_THICKNESS_IN_MM)
+    scadMain = genScadMain
+    topAsm = gen_wasteboard_mounting_holes(cfg.WASTEBOARD_THICKNESS_IN_MM, scadMain=scadMain)
     with open(SCAD_OUT_FILE_NAME, 'w') as ofp:
         ofp.write(topAsm.genScad())
     log.info("wrote {}".format(SCAD_OUT_FILE_NAME))

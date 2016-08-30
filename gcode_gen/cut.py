@@ -9,21 +9,23 @@ from . import hg_coords
 class DrillHole(assembly.Assembly):
 
     def _elab(self,
-              xCenter, yCenter,
-              zTop, zBottom,
+              depth,
               name="drillHole",
               plungeRate=None, zMargin=None, ):
         if plungeRate is None:
             plungeRate = self.cncCfg["defaultDrillingFeedRate"]
         if zMargin is None:
             zMargin = self.cncCfg["zMargin"]
+        vert = np.asarray(((0,0,zMargin), (0,0,-depth), ), dtype=float)
+        self.vertices = self.transforms.doTransform(vert)
         self += cmd.G0(z=self.cncCfg["zSafe"])
-        self += cmd.G0(xCenter, yCenter)
-        self += cmd.G0(z=zMargin + zTop)
+        self += cmd.G0(*self.vertices[0][:2])
+        self += cmd.G0(z=self.vertices[0][2])
+        originalFeedRate = self.cncCfg["lastFeedRate"]
         self += cmd.SetFeedRate(plungeRate)
-        self += cmd.G1(z=zBottom)
-        self += cmd.G1(z=zTop)
-        self += cmd.G0(z=zMargin + zTop)
+        self += cmd.G1(z=self.vertices[1][2])
+        self += cmd.G1(z=self.vertices[0][2])
+        self += cmd.SetFeedRate(originalFeedRate)
         self += cmd.G0(z=self.cncCfg["zSafe"])
 
 
@@ -106,5 +108,25 @@ def Cylinder(depth,
                         zMargin=zMargin,
                         ).scale(sx=diameter/2, sy=diameter/2)
     return cyl
+
+
+def HexagonToDepth(depth,
+                   faceToFace,
+                   overlap=None,
+                   isDogBone=True,
+                   isFilled=True,
+                   zMargin=None):
+    verts = shape.HEXAGON
+    scaleDiagonalToFactorFaceToFace = 1 / np.sqrt(3)
+    scale = scaleDiagonalToFactorFaceToFace * faceToFace
+    hgn = ConvexPolygon(vertices=verts,
+                        depth=depth,
+                        isFilled=isFilled,
+                        isOutline=False,
+                        isDogbone=isDogBone,
+                        overlap=overlap,
+                        zMargin=zMargin,
+                        ).scale(sx=scale, sy=scale)
+    return hgn
     
     

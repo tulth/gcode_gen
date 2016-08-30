@@ -20,7 +20,7 @@ class BaseCmd(object):
     def expand(self, prevPoint):
         self.point.expand(prevPoint)
 
-    def genScad(self, prevPoint):
+    def genPointPairList(self, prevPoint):
         return [((tuple(prevPoint), tuple(self.point), ))]
 
     def compress(self, prevPoint):
@@ -150,7 +150,7 @@ class G2(BaseCmd):
                 return False
         return True
 
-    def genScad(self, prevPoint):
+    def genPointPairList(self, prevPoint):
         segs = arc2segments.arc2segments(prevPoint[0:2], self.point[0:2], self.radius, clockwise=True)
         prevSeg = prevPoint
         results = []
