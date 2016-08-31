@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-"""Generates gcode for drilling nomad 883 bottom right alignment pin holes"""
+"""Generates gcode for drilling nomad 883 bottom left alignment pin holes"""
 import sys
 import argparse
 import logging
 import numpy as np
 import gcode_gen as gc
+import common
 
 log = logging.getLogger()
 # log.setLevel(logging.DEBUG)
@@ -12,12 +13,11 @@ log.setLevel(logging.INFO)
 logHandler = logging.StreamHandler(sys.stdout)
 log.addHandler(logHandler)
 
-GCODE_OUT_FILE_NAME = "bot_right_align_holes.gcode"
-SCAD_OUT_FILE_NAME = "bot_right_align_holes.scad"
+GCODE_OUT_FILE_NAME = "botleft_align_holes.gcode"
+SCAD_OUT_FILE_NAME = "botleft_align_holes.scad"
 
 
-def gen_convex_polgon_cut_demo():
-    toolDia = (1 / 8) * gc.number.mmPerInch
+def gen_botleft_alignment_pin_holes():
     comments = []
     comments.append("""Demo, run {} in bCNC""".format(GCODE_OUT_FILE_NAME))
         
@@ -28,39 +28,21 @@ def gen_convex_polgon_cut_demo():
                                          )
     #
     holeDepth = 0.35 * gc.number.mmPerInch
-    botRight = (-20, -180)
-    asmFile = gc.assembly.FileAsm(name="bot_right", cncCfg=cncCfg, comments=comments, scadMain=genScadMain)
+    asmFile = gc.assembly.FileAsm(name="botleft", cncCfg=cncCfg, comments=comments, scadMain=genScadMain)
     asmFile += gc.assembly.Assembly()
     asm = asmFile.last()
-    botRightOrigin = (-20, -180)
     offsets = [offsetInches * gc.number.mmPerInch for offsetInches in (0.5, 1.5, 2.5)]
     for offset in offsets:
         asm += gc.cut.DrillHole(depth=0.35 * gc.number.mmPerInch,
-                                ).translate(x=bit.cutDiameter / 2,
+                                ).translate(x=-bit.cutDiameter / 2,
                                             y=offset)
     for offset in offsets:
         asm += gc.cut.DrillHole(depth=0.35 * gc.number.mmPerInch,
-                                ).translate(x=-offset,
+                                ).translate(x=offset,
                                             y=-bit.cutDiameter / 2,)
-    asm.translate(*botRightOrigin)
-    # asm += gc.shape.ConvexPolygonPerimeter(vertices=gc.shape.SQUARE,
-    #                                        ).scale(10, 10)
-    # asm += gc.shape.ConvexPolygonInsideDogbonePerimeter(vertices=gc.shape.SQUARE,
-    #                                               ).scale(10, 10).translate(z=-10)
+    asm.translate(*common.botLeft)
     return asmFile
 
-
-def parseArgs(argv):
-    description = __doc__
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
-    # if len(argv) == 1:
-    #     argv.append('-h')
-
-    # parser.add_argument('-d', '--debug',
-    #                     help='Turn on debug printing.',
-    #                     action='store_true',)
-    cfg = parser.parse_args()
-    return cfg
 
 def genScadMain(toolPathName):
     result = []
@@ -74,8 +56,7 @@ def genScadMain(toolPathName):
 
 
 def main(argv):
-    cfg = parseArgs(argv)
-    topAsm = gen_convex_polgon_cut_demo()
+    topAsm = gen_botleft_alignment_pin_holes()
     with open(SCAD_OUT_FILE_NAME, 'w') as ofp:
         ofp.write(topAsm.genScad())
     log.info("wrote {}".format(SCAD_OUT_FILE_NAME))

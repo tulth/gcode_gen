@@ -4,8 +4,9 @@ import sys
 import argparse
 import logging
 import numpy as np
-import gcode_gen as gc
 from functools import partial
+import gcode_gen as gc
+import common
 
 log = logging.getLogger()
 # log.setLevel(logging.DEBUG)
@@ -19,10 +20,10 @@ FACE_TO_FACE = 4.75
 TOTAL_DEPTH = 12.5
 INSERT_DEPTH = 5.8
 
-CENTERS = ((-0.125 * gc.number.mmPerInch, 0.125 * gc.number.mmPerInch),
-           ((-6 + 0.125) * gc.number.mmPerInch, 0.125 * gc.number.mmPerInch),
-           ((-6 + 0.125) * gc.number.mmPerInch, (4 - 0.125) * gc.number.mmPerInch),
-           (-0.125 * gc.number.mmPerInch, (4 - 0.125) * gc.number.mmPerInch), )
+CENTERS = ((0.125 * gc.number.mmPerInch, 0.125 * gc.number.mmPerInch),
+           ((6 - 0.125) * gc.number.mmPerInch, 0.125 * gc.number.mmPerInch),
+           ((6 - 0.125) * gc.number.mmPerInch, (4 - 0.125) * gc.number.mmPerInch),
+           (0.125 * gc.number.mmPerInch, (4 - 0.125) * gc.number.mmPerInch), )
     
 class M3ThreadedInsertRoughCut(gc.assembly.Assembly):
     def _elab(self,
@@ -51,7 +52,7 @@ class M3ThreadedInsertFineCut(gc.assembly.Assembly):
         self += gc.cmd.G0(z=self.cncCfg["zSafe"])
         self += gc.cmd.G0(*self.center[0:2])
         self += gc.cut.HexagonToDepth(depth=RECESS_DEPTH,
-                                      faceToFace=FACE_TO_FACE,
+                                      faceToFace=FACE_TO_FACE + 0.05,
                                       isDogBone=True,
                                       isFilled=False,
                                       overlap=overlap)
@@ -70,14 +71,12 @@ def doM3ThreadedInsertRoughCut():
                                          )
     #
     holeDepth = 0.35 * gc.number.mmPerInch
-    botRight = (-20, -180)
     asmFile = gc.assembly.FileAsm(name="rough", cncCfg=cncCfg, comments=comments, scadMain=None)
     asmFile += gc.assembly.Assembly()
     asm = asmFile.last()
-    botRightOrigin = (-20, -180)
     for center in CENTERS:
            asm += M3ThreadedInsertRoughCut().translate(*center)
-    asm.translate(*botRightOrigin)
+    asm.translate(*common.botLeft)
     return asmFile
 
 def doM3ThreadedInsertDrillCut():
@@ -91,18 +90,16 @@ def doM3ThreadedInsertDrillCut():
                                          )
     #
     holeDepth = 0.35 * gc.number.mmPerInch
-    botRight = (-20, -180)
     asmFile = gc.assembly.FileAsm(name="drill", cncCfg=cncCfg, comments=comments, scadMain=None)
     asmFile += gc.assembly.Assembly()
     asm = asmFile.last()
-    botRightOrigin = (-20, -180)
     for center in CENTERS:
         asm += gc.cmd.G0(*center)
         asm += gc.cut.DrillHole(depth=TOTAL_DEPTH - RECESS_DEPTH - INSERT_DEPTH
                                 ).translate(x=center[0],
                                             y=center[1],
                                             z=-RECESS_DEPTH - INSERT_DEPTH)
-    asm.translate(*botRightOrigin)
+    asm.translate(*common.botLeft)
     return asmFile
 
 
@@ -117,14 +114,12 @@ def doM3ThreadedInsertFineCut(scadMain):
                                          )
     #
     holeDepth = 0.35 * gc.number.mmPerInch
-    botRight = (-20, -180)
     asmFile = gc.assembly.FileAsm(name="fine", cncCfg=cncCfg, comments=comments, scadMain=scadMain)
     asmFile += gc.assembly.Assembly()
     asm = asmFile.last()
-    botRightOrigin = (-20, -180)
     for center in CENTERS:
         asm += M3ThreadedInsertFineCut().translate(*center)
-    asm.translate(*botRightOrigin)
+    asm.translate(*common.botLeft)
     return asmFile
 
 

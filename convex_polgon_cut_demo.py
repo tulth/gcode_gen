@@ -27,7 +27,6 @@ def gen_convex_polgon_cut_demo():
                                          )
     #
     holeDepth = 0.35 * gc.number.mmPerInch
-    botRight = (-20, -180)
     asmFile = gc.assembly.FileAsm(name=__doc__, cncCfg=cncCfg, comments=comments)
     asmFile += gc.assembly.Assembly()
     asm = asmFile.last()
