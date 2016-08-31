@@ -130,3 +130,23 @@ def HexagonToDepth(depth,
     return hgn
     
     
+def RectangleToDepth(depth,
+                     xWidth,
+                     yLength,
+                     overlap=None,
+                     isDogBone=True,
+                     isOutline=True,
+                     isFilled=True,
+                     zMargin=None):
+    verts = shape.SQUARE / np.sqrt(2)
+    rect = ConvexPolygon(vertices=verts,
+                         depth=depth,
+                         isFilled=isFilled,
+                         isOutline=isOutline,
+                         isDogbone=isDogBone,
+                         overlap=overlap,
+                         zMargin=zMargin,
+                         ).scale(sx=xWidth, sy=yLength)
+    return rect
+    
+    
