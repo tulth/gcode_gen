@@ -243,5 +243,5 @@ class FlattenedAssembly(list):
         strList = []
         for entry in self:
             strList.append(entry.genGcode())
-        return "\n".join(strList)
+        return "\n".join(strList) + "\n"
 
