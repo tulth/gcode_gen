@@ -17,7 +17,7 @@ log.addHandler(logHandler)
 
 RECESS_DEPTH = 3
 FACE_TO_FACE = 4.75
-TOTAL_DEPTH = 12.5
+TOTAL_DEPTH = 12.0
 INSERT_DEPTH = 5.8
 
 CENTERS = ((0.125 * gc.number.mmPerInch, 0.125 * gc.number.mmPerInch),

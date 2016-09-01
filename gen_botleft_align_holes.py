@@ -32,12 +32,13 @@ def gen_botleft_alignment_pin_holes():
     asmFile += gc.assembly.Assembly()
     asm = asmFile.last()
     offsets = [offsetInches * gc.number.mmPerInch for offsetInches in (0.5, 1.5, 2.5)]
+    DEPTH = 0.4 * gc.number.mmPerInch
     for offset in offsets:
-        asm += gc.cut.DrillHole(depth=0.35 * gc.number.mmPerInch,
+        asm += gc.cut.DrillHole(depth=DEPTH,
                                 ).translate(x=-bit.cutDiameter / 2,
                                             y=offset)
     for offset in offsets:
-        asm += gc.cut.DrillHole(depth=0.35 * gc.number.mmPerInch,
+        asm += gc.cut.DrillHole(depth=DEPTH,
                                 ).translate(x=offset,
                                             y=-bit.cutDiameter / 2,)
     asm.translate(*common.botLeft)
