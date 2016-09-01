@@ -1,3 +1,4 @@
+import numpy as np
 from . import number
 from . import scad
 
@@ -5,7 +6,7 @@ class Tool(object):
     def __init__(self,
                  cutDiameter,
                  cutHeight,
-                 shankDiameter=(1 / 8 * 25.4),
+                 shankDiameter=(1 / 8 * number.mmPerInch),
                  ):
         self.cutDiameter = cutDiameter
         self.shankDiameter = shankDiameter
@@ -47,9 +48,9 @@ class Tool(object):
 class Carbide3D_101(Tool):
     def __init__(self,
                  ):
-        super().__init__(cutDiameter=(1 / 8 * 25.4),
-                         cutHeight=(0.75 * 25.4),
-                         shankDiameter=(1 / 8 * 25.4),
+        super().__init__(cutDiameter=(1 / 8 * number.mmPerInch),
+                         cutHeight=(0.75 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
                          )
         
     def getScadModel(self):
@@ -70,16 +71,95 @@ class Carbide3D_101(Tool):
 class Carbide3D_102(Tool):
     def __init__(self,
                  ):
-        super().__init__(cutDiameter=(1 / 8 * 25.4),
-                         cutHeight=(0.75 * 25.4),
-                         shankDiameter=(1 / 8 * 25.4),
+        super().__init__(cutDiameter=(1 / 8 * number.mmPerInch),
+                         cutHeight=(0.75 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
                          )
                 
 class Carbide3D_112(Tool):
     def __init__(self,
                  ):
-        super().__init__(cutDiameter=(1 / 16 * 25.4),
-                         cutHeight=(0.25 * 25.4),
-                         shankDiameter=(1 / 8 * 25.4),
+        super().__init__(cutDiameter=(1 / 16 * number.mmPerInch),
+                         cutHeight=(0.25 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
                          )
         
+class InventablesPcbDrill_1p2mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=1.2,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+                
+class InventablesPcbDrill_1p1mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=1.1,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+                
+class InventablesPcbDrill_1p0mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=1,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+                
+class InventablesPcbDrill_0p9mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=0.9,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+                
+class InventablesPcbDrill_0p8mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=0.8,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+                
+class InventablesPcbDrill_0p7mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=0.7,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+                
+class InventablesPcbDrill_0p6mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=0.6,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+                
+class InventablesPcbDrill_0p5mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=0.5,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+                
+class InventablesPcbDrill_0p4mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=0.4,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+                
+class InventablesPcbDrill_0p3mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=0.3,
+                         cutHeight=(0.4 * number.mmPerInch),
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
