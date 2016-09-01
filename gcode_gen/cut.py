@@ -25,7 +25,8 @@ class DrillHole(assembly.Assembly):
         self += cmd.SetFeedRate(plungeRate)
         self += cmd.G1(z=self.vertices[1][2])
         self += cmd.G1(z=self.vertices[0][2])
-        self += cmd.SetFeedRate(originalFeedRate)
+        if originalFeedRate is not None and originalFeedRate > 0:
+            self += cmd.SetFeedRate(originalFeedRate)
         self += cmd.G0(z=self.cncCfg["zSafe"])
 
 
