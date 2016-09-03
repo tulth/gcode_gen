@@ -94,7 +94,6 @@ def doM3ThreadedInsertDrillCut():
     asmFile += gc.assembly.Assembly()
     asm = asmFile.last()
     for center in CENTERS:
-        asm += gc.cmd.G0(*center)
         asm += gc.cut.DrillHole(depth=TOTAL_DEPTH - RECESS_DEPTH - INSERT_DEPTH
                                 ).translate(x=center[0],
                                             y=center[1],
