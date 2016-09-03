@@ -26,6 +26,7 @@ def gen_flatten_area():
     comments.append("tool: {}".format(bit))
     cncCfg = gc.machine.CncMachineConfig(bit,
                                          zSafe=40,
+                                         zMargin=0.4,
                                          )
     #
     xWidth, yLength = (6 + 1) * gc.number.mmPerInch, (4 + 1) * gc.number.mmPerInch
