@@ -81,8 +81,9 @@ class ConvexPolygon(assembly.Assembly):
             else:
                 shp = shape.ConvexPolygonInsideDogbonePerimeter
                 self += shp(self.vertices).translate(z=zCutStep)
-        # already did transforms on verts, before passing to children so don't transform children!
+        self += cmd.G0(z=zStart)
         self += cmd.G0(x=self.center[0], y=self.center[1])
+        # already did transforms on verts, before passing to children so don't transform children!
         self.transforms = hg_coords.TransformList() 
                 
 

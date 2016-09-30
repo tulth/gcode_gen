@@ -163,3 +163,30 @@ class InventablesPcbDrill_0p3mm(Tool):
                          cutHeight=(0.4 * number.mmPerInch),
                          shankDiameter=(1 / 8 * number.mmPerInch),
                          )
+                
+class InventablesPcbMill_P3_3002(Tool):
+    def __init__(self,
+                 ):
+        self.cutAngle = 30 * np.pi / 180
+        shankDiameter = (1 / 8 * number.mmPerInch)
+        cutHeight = (shankDiameter / 2) / np.tan(self.cutAngle / 2)
+        super().__init__(cutDiameter=0.2,
+                         cutHeight=cutHeight,
+                         shankDiameter=shankDiameter,
+                         )
+        
+                
+    def getScadModel(self):
+        resultLines = []
+        ballNose = "sphere(h={cutHeight}, d={cutDiameter});".format(cutHeight=self.cutHeight-self.cutDiameter,
+                                                                      cutDiameter=self.cutDiameter)
+        cylinder = "cylinder(h={cutHeight}, d={cutDiameter});".format(cutHeight=self.cutHeight-self.cutDiameter,
+                                                                      cutDiameter=self.cutDiameter)
+        resultLines.append("translate([0, 0, {}]) {{".format(self.cutDiameter / 2))
+        resultLines.append("union() {")
+        resultLines.append(ballNose)
+        resultLines.append(cylinder)
+        resultLines.append("  }")
+        resultLines.append("}")
+        return "\n".join(resultLines)
+

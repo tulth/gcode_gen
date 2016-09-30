@@ -16,7 +16,7 @@ log.addHandler(logHandler)
 GCODE_OUT_FILE_NAME = "flatten_area.gcode"
 SCAD_OUT_FILE_NAME = "flatten_area.scad"
 
-FLATTEN_DEPTH = 0.2
+FLATTEN_DEPTH = 0.4
 
 def gen_flatten_area():
     comments = []
@@ -26,7 +26,7 @@ def gen_flatten_area():
     comments.append("tool: {}".format(bit))
     cncCfg = gc.machine.CncMachineConfig(bit,
                                          zSafe=40,
-                                         zMargin=0.4,
+                                         zMargin=0,
                                          )
     #
     xWidth, yLength = (6 + 1) * gc.number.mmPerInch, (4 + 1) * gc.number.mmPerInch
