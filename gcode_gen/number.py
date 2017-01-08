@@ -7,11 +7,14 @@ EPSILON = 1.0e-6
 mmPerInch = 25.4
 NUM2STR_FORMAT = "{:.5f}"
 
+
 def num2str(arg):
     return NUM2STR_FORMAT.format(arg)
 
+
 def floatEq(floatA, floatB, epsilon=EPSILON):
     return abs(floatA - floatB) < EPSILON
+
 
 def safeCeil(arg, epsilon=EPSILON):
     """Ceiling of arg, but if arg is within epsilon of an integer just return that int.
@@ -39,12 +42,15 @@ def monotone_increasing(lst):
     return True
 #    return all(itertools.starmap(operator.le, pairs))
 
+
 def monotone_decreasing(lst):
     pairs = zip(lst, lst[1:])
     return all(itertools.starmap(operator.ge, pairs))
 
+
 def monotone(lst):
     return monotone_increasing(lst) or monotone_decreasing(lst)
+
 
 def calcStepsWithMaxSpacing(start, stop, maxSpacing):
     # note: safeCeil(abs(stop-start) / maxSpacing) gives the number of intervals,
@@ -113,20 +119,24 @@ def serpentIter(starts, stops):
             yield start
         directionStartToStop = not(directionStartToStop)
 
+        
 def twiceIter(argSequence):
     for val in argSequence:
         yield val
         yield val
 
+        
 def fillWalkIter(ySteps, xStartSteps, xStopSteps):
     for xCoord, yCoord in zip(serpentIter(xStartSteps, xStopSteps), twiceIter(ySteps)):
         yield xCoord, yCoord
 
+        
 def pairwiseIter(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     a, b = itertools.tee(iterable)
     next(b, None)
     return zip(a, b)
+
 
 def allPlusFirstIter(arg):
     iterArg = iter(arg)
@@ -136,6 +146,10 @@ def allPlusFirstIter(arg):
         yield remaining
     yield firstElement
 
+    
 def loopPairsIter(vertices):
     return pairwiseIter(allPlusFirstIter(vertices))
 
+
+def getHalfRoundedUp(arg):
+    return (arg >> 1) + int((arg % 2) != 0)

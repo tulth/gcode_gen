@@ -3,33 +3,71 @@ from numpy.linalg import norm
 import itertools
 import operator
 from . import number
+from .debug import DBGP
 
 ZERO_VERTS = np.asarray(((0, 0, 0), ), dtype=float)
 
-def edgeEndPointCrossproductsIter(vertices):
-    for edge in verticesToEdgesIter(vertices):
-        yield np.cross(edge[0], edge[1])
-        
-def isConvex(vertices):
-    cpSign = None
-    for cp in edgeEndPointCrossproductsIter(vertices):
-        cpCmp = (cp > 0) - (cp < 0)
-        if cpCmp == 0:
-            pass
-        elif cpSign is None:
-            signPos = cpCmp
-        elif cpSign != cpCmp:
-            return False
-    return True
+
+def verticesToCornersIter(vertices):
+    return edgesToCornersIter(verticesToEdgesIter(vertices))
+
+
+def verticesToEdgesIter(vertices):
+    return number.loopPairsIter(vertices)
+
+
+def edgesToCornersIter(edges):
+    return number.loopPairsIter(edges)
+
+
+def getSignedAreaX2(vertices):
+    xCoords = vertices[:, 0]
+    yCoords = vertices[:, 1]
+    return np.dot(xCoords, np.roll(yCoords, 1)) - np.dot(yCoords, np.roll(xCoords, 1))
+
+
+def getOrientation(vertices):
+    """returns 0 if collinear, 1 if clockwise, -1 if counter clockwise"""
+    return np.sign(getSignedAreaX2(vertices))
+
 
 def isClockwiseVertices(vertices):
-    underEdgeAccumTimes2 = 0
-    for cp in edgeEndPointCrossproductsIter(vertices):
-        underEdgeAccumTimes2 += cp
-    return underEdgeAccumTimes2 > 0
+    return getOrientation(vertices) == 1
+
 
 def isCounterClockwiseVertices(vertices):
-    return not isClockwiseVertices(vertices)
+    return getOrientation(vertices) == -1
+
+
+def edgeEndPointCrossproductsIter(vertices):
+    for edge in verticesToEdgesIter(vertices):
+        print(edge)
+        print(edge[0][0]*edge[1][1] - edge[1][0]*edge[0][1])
+        yield np.cross(edge[0], edge[1])
+
+
+def getCornerVectors(vertices):
+    vec0s = np.roll(vertices, 1, axis=0) - vertices
+    vec1s = np.roll(vertices, -1, axis=0) - vertices
+    return vec0s, vec1s
+
+def getCornerCrossproducts(vertices):
+    return np.cross(*getCornerVectors(vertices))
+
+
+def getOrientations(vertices):
+    """returns 0 if collinear, 1 if clockwise, -1 if counter clockwise"""
+    return np.sign(getCornerCrossproducts(vertices))
+    
+
+def isConvex(vertices):
+    orientations = getOrientations(vertices)
+    # DBGP(orientations)
+    ##
+    hasClockwiseOrientations = np.any(orientations > 0)
+    hasCounterClockwiseOrientations = np.any(orientations < 0)
+    return not (hasClockwiseOrientations and hasCounterClockwiseOrientations)
+
 
 def findBotLeftVertexIdx(vertices):
     botLeftIdx = None
@@ -46,6 +84,7 @@ def findBotLeftVertexIdx(vertices):
         # print(x, y, idx, botLeftIdx, vertices[botLeftIdx], y < vertices[botLeftIdx][1], number.floatEq(y, vertices[botLeftIdx][1]))
     return botLeftIdx
 
+
 def findTopVertexIdx(vertices):
     topIdx = None
     for idx, vertex in enumerate(vertices):
@@ -53,27 +92,22 @@ def findTopVertexIdx(vertices):
             topIdx = idx
     return topIdx
 
-def verticesToEdgesIter(vertices):
-    return number.loopPairsIter(vertices)
-
-def edgesToCornersIter(edges):
-    return number.loopPairsIter(edges)
-
-def verticesToCornersIter(vertices):
-    return edgesToCornersIter(verticesToEdgesIter(vertices))
 
 def edgeToVectors(edge):
     return (edge[0] - edge[1], edge[2] - edge[1], )
+
 
 def cornerToVectors(corner):
     vecCCW = corner[0][0] - corner[0][1]
     vecCW = corner[1][1] - corner[1][0]
     return vecCCW, vecCW
 
+
 def verticesTo2d(vertices):
     assert vertices.shape[-1] in (2, 3)
     return vertices[:, 0:2]
-    
+
+
 def standardizedConvexPolygonVertices(vertices):
     """vertices should be a numpy ndarray vertex array that lies in a plane parallel to XY.
 Returns vertex list in counterclockwise order, with the bottom Left vertex in the 0th position"""
@@ -89,13 +123,25 @@ Returns vertex list in counterclockwise order, with the bottom Left vertex in th
     result = np.roll(result, -botLeftVertexIdx, axis=0)
     return result
 
+
 def toUnitVec(vec):
     return vec / norm(vec)
+
+
+def toUnitVecs(vecs):
+    """0 length vectors return zero length vectors!"""
+    mags = np.sqrt((vecs ** 2).sum(-1))
+    result = np.empty_like(vecs)
+    div0Indices = np.where(mags == 0)
+    nonDiv0Indices = np.where(mags != 0)
+    result[div0Indices] = vecs[div0Indices]
+    result[nonDiv0Indices] = vecs[nonDiv0Indices] / (mags[nonDiv0Indices])[..., np.newaxis]
+    return result
+
 
 def calcCornerCorrectionVecForToolCutDiameter(corner, toolCutDiameter, isOutsideCorrection):
     """ASSUMES corner is a from a vertex list that conforms to standardizedConvexPolygonVertices!"""
     vecCCW, vecCW = cornerToVectors(corner)
-    diagonal = (vecCCW + vecCW)
     u_vecCW = toUnitVec(vecCW)
     u_vecCCW = toUnitVec(vecCCW)
     toolCutRadius = toolCutDiameter / 2
@@ -140,9 +186,9 @@ def calcInsideOutsideCutVertexDeltas(v, isOutside, toolCutDiameter):
 
 def calcEdgeXIntercerptHorizontalLine(edge, y=0):
     if edge[0][1] == edge[1][1]:  ## SKIPS HORZONTAL EDGES
-        return None    
+        return None
     if edge[0][1] > edge[1][1]:
-        hiVert = edge[0] 
+        hiVert = edge[0]
         loVert = edge[1]
     else:
         hiVert = edge[1]
@@ -153,3 +199,119 @@ def calcEdgeXIntercerptHorizontalLine(edge, y=0):
         return None
     xIntercept = np.interp(y, (loVert[1], hiVert[1]), (loVert[0], hiVert[0]))
     return xIntercept
+
+
+def getBounds(vertices):
+    assert isinstance(vertices, np.ndarray)
+    if vertices.shape[1] not in (2, ):
+        raise Exception("boundingBox argument must be 2 dimensional vertex list")
+    bounds = np.asarray([(np.min(vertices[:, dimNum]), np.max(vertices[:, dimNum]), ) for dimNum in range(vertices.shape[1])])
+    return bounds
+
+def convertBoundsToBox(bounds):
+    return np.asarray((
+        (bounds[0][0], bounds[1][0], ),
+        (bounds[0][1], bounds[1][0], ),
+        (bounds[0][1], bounds[1][1], ),
+        (bounds[0][0], bounds[1][1], ),
+        ))
+
+def getBoundingBox(vertices):
+    bounds = getBounds(vertices)
+    return convertBoundsToBox(bounds)
+
+def getScaledBounds(vertices, scaleFactor=1.1):
+    bounds = getBounds(vertices)
+    sizes = np.asarray([bounds[dimNum][1] - bounds[dimNum][0] for dimNum in range(2)])
+    scaledSizes = sizes * scaleFactor
+    deltas = (scaledSizes - sizes) / 2.0
+    scaledBounds = np.asarray((
+        ((bounds[0][0] - deltas[0]),
+         (bounds[0][1] + deltas[0]), ),
+        ((bounds[1][0] - deltas[1]),
+         (bounds[1][1] + deltas[1]), ),
+        ))
+    return scaledBounds
+
+
+def getScaledBoundingBox(vertices, scaleFactor=1.1):
+    return convertBoundsToBox(getScaledBounds(vertices, scaleFactor))
+
+
+def isOnEdge(edge, vert):
+    if not(edge[1][0] <= max(edge[0][0], vert[0])):
+        return False
+    if not(edge[1][0] >= min(edge[0][0], vert[0])):
+        return False
+    if not(edge[1][1] <= max(edge[0][1], vert[1])):
+        return False
+    if not(edge[1][1] >= min(edge[0][1], vert[1])):
+        return False
+    return True
+    # if (edge[1][0] <= max(edge[0][0], vert[0]) and edge[1][0] >= min(edge[0][0], vert[0]) and
+    #     edge[1][1] <= max(edge[0][1], vert[1]) and edge[1][1] >= min(edge[0][1], vert[1])):
+    #     return True
+    # else:
+    #     return False
+
+
+def isEdgeIntersect(edge0, edge1):
+    left = max(min(edge0[0][0], edge0[1][0]), min(edge1[0][0], edge1[1][0]))
+    right = min(max(edge0[0][0], edge0[1][0]), max(edge1[0][0], edge1[1][0]))
+    top = max(min(edge0[0][1], edge0[1][1]), min(edge1[0][1], edge1[1][1]))
+    bottom = min(max(edge0[0][1], edge0[1][1]), max(edge1[0][1], edge1[1][1]))
+
+    if top > bottom or left > right:
+        return False
+    else:
+        return True
+    
+# # Below did not work
+# def isEdgeIntersect(edge0, edge1):
+#     p1 = edge0[0]
+#     q1 = edge0[1]
+#     p2 = edge1[0]
+#     q2 = edge1[1]
+#     o1 = getOrientation(np.asarray((p1, q1, p2)))
+#     o2 = getOrientation(np.asarray((p1, q1, q2)))
+#     o3 = getOrientation(np.asarray((p2, q2, p1)))
+#     o4 = getOrientation(np.asarray((p2, q2, q1)))
+#     # general case
+#     if (o1 != o2) and (o3 != o4):
+#         return True
+#     # Special Cases
+#     # p1, q1 and p2 are colinear and p2 lies on segment p1q1
+#     if (o1 == 0) and isOnEdge(np.asarray((p1, p2)), q1):
+#         return True
+#     # p1, q1 and p2 are colinear and q2 lies on segment p1q1
+#     if (o2 == 0) and isOnEdge(np.asarray((p1, q2)), q1):
+#         return True
+#     # p2, q2 and p1 are colinear and p1 lies on segment p2q2
+#     if (o3 == 0) and isOnEdge(np.asarray((p2, p1)), q2):
+#         return True
+#      # p2, q2 and q1 are colinear and q1 lies on segment p2q2
+#     if (o4 == 0) and isOnEdge(np.asarray((p2, q1)), q2):
+#         return True
+#     # else false
+#     return False
+
+def isSimple(vertices):
+    numEdges = len(vertices)
+    edges = tuple(verticesToEdgesIter(vertices))
+    for edgeIndexPair in itertools.combinations(range(len(vertices)), 2):
+        if ((edgeIndexPair[0] + 1) % numEdges) == edgeIndexPair[1]:
+            # print("adjacent")
+            continue
+        elif ((edgeIndexPair[0] - 1) % numEdges) == edgeIndexPair[1]:
+            # print("adjacent")
+            continue
+        else:
+            #DBGP(edgeIndexPair)
+            #DBGP(edges[edgeIndexPair[0]])
+            #DBGP(edges[edgeIndexPair[1]])
+            #print("** NOT adjacent **")
+            if (isEdgeIntersect(edges[edgeIndexPair[0]], edges[edgeIndexPair[1]])):
+                #print("** Intersected! **")
+                return False
+    return True
+
