@@ -8,6 +8,7 @@ import gcode_gen as gc
 import common
 from gen_simple_box import *  # FIXME
 
+
 # FAST_SCAD = True
 FAST_SCAD = False
 SCAD_SHOW_WORKPIECE = True
@@ -227,7 +228,7 @@ def main(argv):
                     customFaceCutDict=customFaceCutDict,
                     )
     box.gen()
-
+    
     return 0
 
 if __name__ == "__main__":

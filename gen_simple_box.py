@@ -10,12 +10,13 @@ from functools import partial
 import itertools
 import rect_pack
 
+#FAST_SCAD = True
 FAST_SCAD = False
 SCAD_SHOW_WORKPIECE = True
 #SCAD_SHOW_WORKPIECE = False
 SCAD_SHOW_RPI3_CCA = SCAD_SHOW_WORKPIECE
 
-EDGE_MARGIN = 5
+EDGE_MARGIN = 8
 
 log = logging.getLogger()
 
@@ -471,13 +472,19 @@ class SimpleBox(gc.hg_coords.Transformable):
         for rect in packer.packedRectList:
             self.moveHelper(rect.data, rect.x, rect.y, doRot=rect.rotated)
         #
-        # self.moveHelper(SimpleBox.FACE_FRONT, 113.35, 86.35)
-        # self.moveHelper(SimpleBox.FACE_BACK, 67.175, 86.35, doRot=True)
-        # #self.translate(SimpleBox.FACE_BACK, -200, -200)
-        # self.moveHelper(SimpleBox.FACE_LEFT, 67.175, 0)
-        # self.moveHelper(SimpleBox.FACE_RIGHT, 67.175, 43.175)
-        # self.moveHelper(SimpleBox.FACE_TOP, 0, 0)
-        # self.moveHelper(SimpleBox.FACE_BOTTOM, 0, 91.175)
+        # FIXME this should be done elsewhere, and its probably not quite right!
+        for faceIdx in SimpleBox.FACES:
+            WASTEBOARD_BOT_LEFT = np.asarray((-187.2-12.7, -195.3-12.7))
+            print("WASTEBOARD_BOT_LEFT: ", WASTEBOARD_BOT_LEFT)
+            WASTEBOARD_TOP_RIGHT = WASTEBOARD_BOT_LEFT + 177.8 + 2 * 12.7
+            print("WASTEBOARD_TOP_RIGHT: ", WASTEBOARD_TOP_RIGHT)
+            WASTEBOARD_DIMS = WASTEBOARD_TOP_RIGHT - WASTEBOARD_BOT_LEFT
+            print("WASTEBOARD_DIMS: ", WASTEBOARD_DIMS)
+            WASTEBOARD_CENTER = (WASTEBOARD_BOT_LEFT + WASTEBOARD_TOP_RIGHT) / 2
+            print("WASTEBOARD_CENTER: ", WASTEBOARD_CENTER)
+            translate = WASTEBOARD_CENTER / 2
+            print(translate)
+            self.translateFace(faceIdx, *(WASTEBOARD_CENTER))
         #
         if FAST_SCAD:
             self.asmCoarse.cncCfg["defaultDepthPerMillingPass"] = 1000
@@ -604,8 +611,12 @@ class SimpleBox(gc.hg_coords.Transformable):
     def getScadWorkPiece(self):
         result = []
         result.append("module workpiece() {")
-        # FIXME should translate by the total assembly translation
-        result.append("  translate([{}, {}, {}]) ".format(-self.workpieceWidth/2, -self.workpieceHeight/2, -self.workpieceDepth))
+        # FIXME  this is a mess
+        WASTEBOARD_BOT_LEFT = np.asarray((-187.2-12.7, -195.3-12.7))
+        #result.append("  translate([{}, {}, {}]) ".format(-self.workpieceWidth/2, -self.workpieceHeight/2, -self.workpieceDepth))
+        result.append("  translate([{}, {}, {}]) ".format(WASTEBOARD_BOT_LEFT[0],
+                                                          WASTEBOARD_BOT_LEFT[1],
+                                                          -self.workpieceDepth, ))
         result.append("  cube([{}, {}, {}]);".format(self.workpieceWidth, self.workpieceHeight, self.workpieceDepth))
         #result.append("  square([{}, {}]);".format(self.workpieceWidth, self.workpieceHeight))
         result.append("}")
