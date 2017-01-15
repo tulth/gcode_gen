@@ -190,3 +190,21 @@ class InventablesPcbMill_P3_3002(Tool):
         resultLines.append("}")
         return "\n".join(resultLines)
 
+class Mill_0p5mm(Tool):
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=0.5,
+                         cutHeight=(0.25 * number.mmPerInch),  # FIXME?
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+        
+
+class Mill_0p01mm(Tool):  # not for real! For testing extreme cases
+    def __init__(self,
+                 ):
+        super().__init__(cutDiameter=0.01,
+                         cutHeight=(0.25 * number.mmPerInch),  # FIXME?
+                         shankDiameter=(1 / 8 * number.mmPerInch),
+                         )
+        
+        

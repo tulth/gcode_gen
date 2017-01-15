@@ -152,3 +152,40 @@ def RectangleToDepth(depth,
     return rect
     
     
+class PolygonPerimeter(assembly.Assembly):
+    
+    def _elab(self, vertices, ):
+        self.vertices = self.transforms.doTransform(vertices)
+        for v in self.vertices:
+            self += cmd.G1(*v)
+        self += cmd.G1(*self.vertices[0])
+
+class PolygonCut(assembly.Assembly):
+    
+    def _elab(self,
+              polygon,
+              depth,
+              overlap=None,
+              plungeRate=None,
+              zMargin=None):
+        self.depth = depth
+        if overlap is None:
+            overlap = self.cncCfg["defaultMillingOverlap"]
+        if plungeRate is None:
+            plungeRate = self.cncCfg["defaultDrillingFeedRate"]
+        if zMargin is None:
+            zMargin = self.cncCfg["zMargin"]
+        vertices = self.transforms.doTransform(polygon.vertices)
+        #self += cmd.G0(x=self.center[0], y=self.center[1])
+        self += cmd.G0(x=vertices[0][0], y=vertices[0][1])
+        zStart = self.center[2] + zMargin
+        self += cmd.G0(z=zStart)
+        zCutSteps = number.calcZSteps(zMargin, -depth, self.cncCfg["defaultDepthPerMillingPass"])
+        for zCutStep in zCutSteps:
+            self += PolygonPerimeter(vertices).translate(z=zCutStep)
+        self += cmd.G0(z=self.cncCfg["zSafe"])
+        self += cmd.G0(x=self.center[0], y=self.center[1])
+        # already did transforms on verts, before passing to children so don't transform children!
+        self.transforms = hg_coords.TransformList()
+
+        

@@ -16,6 +16,7 @@ from . import scad
 from . import machine
 from . import cut
 from . import shape
+from . import dogbone
 from . import hg_coords
 from . import tool
 from . import debug

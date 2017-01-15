@@ -74,3 +74,28 @@ class TransformList(list):
         return result
     
     
+class Transformable(object):
+    
+    def __init__(self, *args, **kwargs):
+        self.transforms = TransformList()
+        super().__init__(*args, **kwargs)
+    
+    def translate(self, x=0, y=0, z=0):
+        self.transforms.translate(x, y, z)
+        return self
+
+    def scale(self, sx=1, sy=1, sz=1):
+        self.transforms.scale(sx, sy, sz)
+        return self
+    
+    def rotate(self, phi, x=0, y=0, z=1):
+        self.transforms.rotate(phi, x, y, z)
+        return self
+
+    def customTransform(self, mat, name=None):
+        self.transforms.customTransform(mat, name)
+        return self
+
+    def transformVertices(self, vertices):
+        return self.transforms.doTransform(vertices)
+        

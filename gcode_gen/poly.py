@@ -67,7 +67,7 @@ class Polygon(object):
         
     @property
     def boundingBox(self, ):
-        if not self._boundingBox:
+        if self._boundingBox is None:
             self._boundingBox = vertex.getBoundingBox(self.vertices)
         return self._boundingBox
         
@@ -108,6 +108,7 @@ class Polygon(object):
         #DBGP(prevVecs)
         #DBGP(nextVecs)
         u_prevVecs = vertex.toUnitVecs(prevVecs)
+
         u_nextVecs = vertex.toUnitVecs(nextVecs)
         u_nextPerpCwVecs = np.empty_like(u_nextVecs)
         u_nextPerpCwVecs[:, 0] = u_nextVecs[:, 1]
@@ -169,3 +170,49 @@ class Polygon(object):
 
     def growPoly(self, amount, name=None):
         return self.shrinkPoly(-amount, name)
+
+    def getCorners(self, ):
+        """Its worth noting the corners returned here are the 3 verts of the corner.
+        This method does not return the 4 verts that make up each edge pair.
+        The order of the three verts is the center corner vert, next corner vert, prev corner vert.
+        """
+        for corner in vertex.verticesToCornersIter(np.roll(self.vertices, 1, axis=0)):
+            cornerVerts = np.asarray((corner[0][1], corner[1][1], corner[0][0], ))
+            yield cornerVerts
+    
+    def getCornerVertsForIndex(self, idx):
+        nextIdx = (idx + 1) % len(self.vertices)
+        return np.asarray((self.vertices[idx], self.vertices[nextIdx], self.vertices[idx - 1]))
+    
+    def getInsideCornerIndices(self):
+        if self.isClockwise:
+            expectedOrientation = 1
+        else:
+            expectedOrientation = -1
+        for idx, cornerOrientation in enumerate(self.orientations):
+            isInsideCorner = ((cornerOrientation != 0) and
+                              (cornerOrientation != expectedOrientation))
+            if isInsideCorner:
+                yield idx
+
+                
+class PolygonInsideDogbone(Polygon):
+    # FIXME this may be wrong/suboptimal, because it assumes all corners are inside corners
+    def __init__(self, vertices, shrinkAmount, zVal=None, name=None):
+        basePoly = Polygon(vertices=vertices, name="basePoly")
+        shrunkPoly = basePoly.shrinkPoly(shrinkAmount)
+        dogboneVertices = []
+        for baseVert, corner in zip(basePoly.vertices,
+                                vertex.verticesToCornersIter(np.roll(shrunkPoly.vertices, 1, axis=0))):
+            insideVert = corner[0][1]
+            dogboneVertices.append(insideVert)
+            vec0, vec1 = vertex.cornerToVectors(corner)
+            diagonal = (vertex.toUnitVec(vec0) + vertex.toUnitVec(vec1))
+            moveDirection = -vertex.toUnitVec(diagonal)
+            moveAmount = shrinkAmount
+            dogbonePoint = baseVert - moveDirection * moveAmount
+            dogboneVertices.append(dogbonePoint)
+            dogboneVertices.append(insideVert)
+        super().__init__(dogboneVertices, zVal, name)
+
+    

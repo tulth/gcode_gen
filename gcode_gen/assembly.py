@@ -22,9 +22,19 @@ class Assembly(object):
         if name is None:
             name = self.defaultName()
         self.name = name
-        self.cncCfg = cncCfg
+        self._cncCfg = cncCfg
         self.children = []
 
+    @property
+    def cncCfg(self):
+        return self._cncCfg
+    
+    @cncCfg.setter
+    def cncCfg(self, arg):
+        self._cncCfg = arg
+        for child in self.children:
+            child.cncCfg = arg
+    
     @property
     def center(self):
         """only use this after elaboration!"""

@@ -1,5 +1,6 @@
 import numpy as np
-from numpy.linalg import norm
+# from numpy.linalg import norm
+import numpy.linalg
 import itertools
 import operator
 from . import number
@@ -123,6 +124,8 @@ Returns vertex list in counterclockwise order, with the bottom Left vertex in th
     result = np.roll(result, -botLeftVertexIdx, axis=0)
     return result
 
+def norm(vec):
+    return numpy.linalg.norm(vec)
 
 def toUnitVec(vec):
     return vec / norm(vec)
