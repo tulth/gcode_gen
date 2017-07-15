@@ -38,7 +38,16 @@ class SimpleBoxBaseFace(gc.hg_coords.Transformable):
                  workpieceExtraCutDepth=0.8,
                  customFaceCut=None,
                  ):
-        initFromDict(locals())
+        self.name = name
+        self.interiorX = interiorX
+        self.interiorY = interiorY
+        self.workpieceDepth = workpieceDepth
+        self.tabLength = tabLength
+        self.postTabThickness = postTabThickness
+        self.coarseToolCutDiameter = coarseToolCutDiameter
+        self.fineToolCutDiameter = fineToolCutDiameter
+        self.workpieceExtraCutDepth = workpieceExtraCutDepth
+        self.customFaceCut = customFaceCut
         self.boxExteriorX = self.interiorX + 2 * (workpieceDepth + postTabThickness)
         self.boxExteriorY = self.interiorY + 2 * (workpieceDepth + postTabThickness)
         self.baseOutlineVerts = np.asarray([[-self.EOX(), -self.EOY()],
@@ -359,7 +368,7 @@ class TopBottomBoxFace(SimpleBoxBaseFace):
         #     self.expandedOutlinePoly.plot(figure=False, show=True, color='b')
 
 
-class SimpleBox(gc.hg_coords.Transformable):
+class SimpleBox(object):
     FACE_FRONT, FACE_BACK, FACE_LEFT, FACE_RIGHT, FACE_TOP, FACE_BOTTOM = range(6)
     FACE_DICT = dict(((FACE_FRONT, 'FACE_FRONT'), (FACE_BACK, 'FACE_BACK'),
                       (FACE_LEFT, 'FACE_LEFT'), (FACE_RIGHT, 'FACE_RIGHT'),
@@ -381,11 +390,27 @@ class SimpleBox(gc.hg_coords.Transformable):
                  fineCutTool,
                  workpieceExtraCutDepth=0.8,
                  customFaceCutDict=None,
+                 workpieceBotLeft=common.WASTEBOARD_BOT_LEFT,
                  ):
-        initFromDict(locals())
         super().__init__()
+        self.name = name
+        self.interiorWidth = interiorWidth
+        self.interiorHeight = interiorHeight
+        self.interiorDepth = interiorDepth
+        self.workpieceWidth = workpieceWidth
+        self.workpieceHeight = workpieceHeight
+        self.workpieceDepth = workpieceDepth
+        self.tabLength = tabLength
+        self.postTabThickness = postTabThickness
+        self.footWidth = footWidth
+        self.footDepth = footDepth
+        self.coarseCutTool = coarseCutTool
+        self.fineCutTool = fineCutTool
+        self.workpieceExtraCutDepth = workpieceExtraCutDepth
+        self.customFaceCutDict = customFaceCutDict
         if self.customFaceCutDict is None:
             self.customFaceCutDict = {}
+        self.workpieceBotLeft = workpieceBotLeft
         self.asmCoarse = self.init_mill_Coarse()
         self.asmFine = self.init_mill_Fine()
         #self.faces = [{'o': None, 'Coarse': self.asmCoarse, 'Fine': self.asmFine, } for face in SimpleBox.FACES]
@@ -456,7 +481,8 @@ class SimpleBox(gc.hg_coords.Transformable):
         # else:
         #     self.translateFace(faceId, -sizeX/2, -sizeY/2, )
         self.translateFace(faceId, x, y)
-        self.translateFace(faceId, -(self.workpieceWidth - EDGE_MARGIN)/2, -(self.workpieceHeight - EDGE_MARGIN)/2)
+        #self.translateFace(faceId, -(self.workpieceWidth - EDGE_MARGIN)/2, -(self.workpieceHeight - EDGE_MARGIN)/2)
+        self.translateFace(faceId, EDGE_MARGIN/2, EDGE_MARGIN/2)
 
     def gen(self):
         for faceIdx in SimpleBox.FACES:
@@ -472,19 +498,9 @@ class SimpleBox(gc.hg_coords.Transformable):
         for rect in packer.packedRectList:
             self.moveHelper(rect.data, rect.x, rect.y, doRot=rect.rotated)
         #
-        # FIXME this should be done elsewhere, and its probably not quite right!
-        for faceIdx in SimpleBox.FACES:
-            WASTEBOARD_BOT_LEFT = np.asarray((-187.2-12.7, -195.3-12.7))
-            print("WASTEBOARD_BOT_LEFT: ", WASTEBOARD_BOT_LEFT)
-            WASTEBOARD_TOP_RIGHT = WASTEBOARD_BOT_LEFT + 177.8 + 2 * 12.7
-            print("WASTEBOARD_TOP_RIGHT: ", WASTEBOARD_TOP_RIGHT)
-            WASTEBOARD_DIMS = WASTEBOARD_TOP_RIGHT - WASTEBOARD_BOT_LEFT
-            print("WASTEBOARD_DIMS: ", WASTEBOARD_DIMS)
-            WASTEBOARD_CENTER = (WASTEBOARD_BOT_LEFT + WASTEBOARD_TOP_RIGHT) / 2
-            print("WASTEBOARD_CENTER: ", WASTEBOARD_CENTER)
-            translate = WASTEBOARD_CENTER / 2
-            print(translate)
-            self.translateFace(faceIdx, *(WASTEBOARD_CENTER))
+        # FIXME this should be done elsewhere
+        for faceIdx in SimpleBox.FACES: 
+           self.translateFace(faceIdx, *(self.workpieceBotLeft))
         #
         if FAST_SCAD:
             self.asmCoarse.cncCfg["defaultDepthPerMillingPass"] = 1000
@@ -493,7 +509,7 @@ class SimpleBox(gc.hg_coords.Transformable):
         wName = "{}{}".format(self.name, "_CoarseAsm")
         scadName = "{}{}".format(wName, ".scad")
         with open(scadName, 'w') as ofp:
-            ofp.write(self.asmCoarse.genScad())
+             ofp.write(self.asmCoarse.genScad())
         log.info("wrote {}".format(scadName))
         if not FAST_SCAD:
             gcodeName = "{}{}".format(wName, ".gcode")
@@ -612,11 +628,13 @@ class SimpleBox(gc.hg_coords.Transformable):
         result = []
         result.append("module workpiece() {")
         # FIXME  this is a mess
-        WASTEBOARD_BOT_LEFT = np.asarray((-187.2-12.7, -195.3-12.7))
-        #result.append("  translate([{}, {}, {}]) ".format(-self.workpieceWidth/2, -self.workpieceHeight/2, -self.workpieceDepth))
-        result.append("  translate([{}, {}, {}]) ".format(WASTEBOARD_BOT_LEFT[0],
-                                                          WASTEBOARD_BOT_LEFT[1],
+        result.append("  translate([{}, {}, {}]) ".format(self.workpieceBotLeft[0],
+                                                          self.workpieceBotLeft[1],
                                                           -self.workpieceDepth, ))
+        # result.append("  translate([{}, {}, {}]) ".format(-self.workpieceWidth/2, -self.workpieceHeight/2, 0))
+        # result.append("  translate([{}, {}, {}]) ".format(common.WASTEBOARD_CENTER[0],
+        #                                                   common.WASTEBOARD_CENTER[1],
+        #                                                   -self.workpieceDepth, ))
         result.append("  cube([{}, {}, {}]);".format(self.workpieceWidth, self.workpieceHeight, self.workpieceDepth))
         #result.append("  square([{}, {}]);".format(self.workpieceWidth, self.workpieceHeight))
         result.append("}")
