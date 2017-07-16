@@ -1,5 +1,5 @@
 """
-Need an agreed upon base class for vertex/vertices
+A basic base class for point and point lists
 """
 import numpy as np
 
@@ -8,6 +8,14 @@ class Point(object):
 
     def __init__(self, x=0, y=0, z=0):
         self.arr = np.array((x, y, z), dtype=np.float64)
+
+
+def pointlist_from_list(arg_list):
+    result = PointList()
+    for raw_point in arg_list:
+        point = Point(*raw_point)
+        result.append(point)
+    return result
 
 
 class PointList(object):

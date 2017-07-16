@@ -3,10 +3,10 @@ Homogenous affine/linear transforms for x/y/z coordinates.
 """
 import numpy as np
 from numpy.linalg import norm
-from . import vertex
+from . import point
 
 
-def translateMat(x=0, y=0, z=0):
+def translate_mat(x=0, y=0, z=0):
     mat = np.identity(4)
     mat[0, 3] = x
     mat[1, 3] = y
@@ -14,7 +14,7 @@ def translateMat(x=0, y=0, z=0):
     return mat
 
 
-def scaleMat(sx=1, sy=1, sz=1):
+def scale_mat(sx=1, sy=1, sz=1):
     mat = np.identity(4)
     mat[0, 0] = sx
     mat[1, 1] = sy
@@ -22,7 +22,7 @@ def scaleMat(sx=1, sy=1, sz=1):
     return mat
 
 
-def rotateMat(phi, x=0, y=0, z=1):
+def rotate_mat(phi, x=0, y=0, z=1):
     """Rotate by phi radians about axis defined by (x, y, z),
     (x,y,z) defaults to xy rotation where +phi is a counterclockwise rotation
     """
@@ -49,13 +49,13 @@ def rotateMat(phi, x=0, y=0, z=1):
 class TransformList(list):
 
     def translate(self, x=0, y=0, z=0):
-        self.append(("T", translateMat(x, y, z)))
+        self.append(("T", translate_mat(x, y, z)))
 
     def scale(self, sx=1, sy=1, sz=1):
-        self.append(("S", scaleMat(sx, sy, sz)))
+        self.append(("S", scale_mat(sx, sy, sz)))
 
     def rotate(self, phi, x=0, y=0, z=1):
-        self.append(("R", rotateMat(phi, x, y, z)))
+        self.append(("R", rotate_mat(phi, x, y, z)))
 
     def customTransform(self, mat, name=None):
         if name is None:
@@ -85,8 +85,9 @@ class TransformList(list):
         return result
 
 
-class Transformable(object):
-    """Base clase for an object on which basic transforms are defined"""
+class Transformable(point.PointList):
+    """Base clase for an object on which basic transforms are defined.
+    NOTE: transform application is deferred until apply_transforms() is called"""
     def __init__(self, *args, **kwargs):
         self.transforms = TransformList()
         super().__init__(*args, **kwargs)
@@ -107,5 +108,5 @@ class Transformable(object):
         self.transforms.customTransform(mat, name)
         return self
 
-    def transformVertices(self, vertices):
-        return self.transforms.doTransform(vertices)
+    def apply_transforms(self):
+        self.arr = self.transforms.doTransform(self.arr)
