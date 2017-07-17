@@ -8,13 +8,13 @@ class TestPoint(unittest.TestCase):
 
     def test_2d(self):
         actual = point.Point(1, 2).arr
-        expected = np.asarray((1, 2, 0))
-        self.assertTrue(np.allclose(actual, expected))
+        expect = np.asarray((1, 2, 0))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_3d(self):
         actual = point.Point(1, 2, 3).arr
-        expected = np.asarray((1, 2, 3))
-        self.assertTrue(np.allclose(actual, expected))
+        expect = np.asarray((1, 2, 3))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
 
 class TestPointList(unittest.TestCase):
@@ -27,39 +27,39 @@ class TestPointList(unittest.TestCase):
         pl = point.PointList()
         pl.append(point.Point(1, 2))
         actual = pl.arr
-        expected = np.asarray(((1, 2, 0), ))
-        self.assertTrue(np.allclose(actual, expected))
+        expect = np.asarray(((1, 2, 0), ))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_2d_multi(self):
         pl = point.PointList()
         pl.append(point.Point(1, 2))
         pl.append(point.Point(3, 4))
         actual = pl.arr
-        expected = np.asarray(((1, 2, 0), (3, 4, 0)))
-        self.assertTrue(np.allclose(actual, expected))
+        expect = np.asarray(((1, 2, 0), (3, 4, 0)))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_3d_single(self):
         pl = point.PointList()
         pl.append(point.Point(1, 2, 3))
         actual = pl.arr
-        expected = np.asarray(((1, 2, 3), ))
-        self.assertTrue(np.allclose(actual, expected))
+        expect = np.asarray(((1, 2, 3), ))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_3d_multi(self):
         pl = point.PointList()
         pl.append(point.Point(1, 2, 3))
         pl.append(point.Point(4, 5, 6))
         actual = pl.arr
-        expected = np.asarray(((1, 2, 3), (4, 5, 6)))
-        self.assertTrue(np.allclose(actual, expected))
+        expect = np.asarray(((1, 2, 3), (4, 5, 6)))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_2d_3d_mix(self):
         pl = point.PointList()
         pl.append(point.Point(1, 2))
         pl.append(point.Point(4, 5, 6))
         actual = pl.arr
-        expected = np.asarray(((1, 2, 0), (4, 5, 6)))
-        self.assertTrue(np.allclose(actual, expected))
+        expect = np.asarray(((1, 2, 0), (4, 5, 6)))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_extend_basic(self):
         pl0 = point.PointList()
@@ -70,7 +70,8 @@ class TestPointList(unittest.TestCase):
         pl1.append(point.Point(10, 11))
         pl1.extend(pl0)
         actual = pl1.arr
-        expected = np.asarray(((7, 8, 9), (10, 11, 0), (1, 2, 0), (4, 5, 6), ))
+        expect = np.asarray(((7, 8, 9), (10, 11, 0), (1, 2, 0), (4, 5, 6), ))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_extend_empty_left(self):
         pl0 = point.PointList()
@@ -79,7 +80,8 @@ class TestPointList(unittest.TestCase):
         pl0.append(point.Point(4, 5, 6))
         pl1.extend(pl0)
         actual = pl1.arr
-        expected = np.asarray(((1, 2, 0), (4, 5, 6)))
+        expect = np.asarray(((1, 2, 0), (4, 5, 6)))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_extend_empty_right(self):
         pl0 = point.PointList()
@@ -88,11 +90,15 @@ class TestPointList(unittest.TestCase):
         pl0.append(point.Point(4, 5, 6))
         pl0.extend(pl1)
         actual = pl0.arr
-        expected = np.asarray(((1, 2, 0), (4, 5, 6)))
+        expect = np.asarray(((1, 2, 0), (4, 5, 6)))
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
-    def test_pointlist_from_list(self):
-        pl = point.pointlist_from_list([[1, 1, 0], [3, 1, 0], [3, 3, 0], [1, 3, 0], ])
+    def test_PointList_from_list(self):
+        pl = point.PointList_from_list([[1, 1, 0], [3, 1, 0], [3, 3, 0], [1, 3, 0], ])
         actual = pl.arr
-        expected = np.asarray([[1, 1, 0], [3, 1, 0], [3, 3, 0], [1, 3, 0], ])
+        expect = np.asarray([[1, 1, 0], [3, 1, 0], [3, 3, 0], [1, 3, 0], ])
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
-
+    def test_len(self):
+        pass
+        # self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))

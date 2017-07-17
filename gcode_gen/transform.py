@@ -1,6 +1,6 @@
-"""
+'''
 Homogenous affine/linear transforms for x/y/z coordinates.
-"""
+'''
 import numpy as np
 from numpy.linalg import norm
 from . import point
@@ -23,9 +23,9 @@ def scale_mat(sx=1, sy=1, sz=1):
 
 
 def rotate_mat(phi, x=0, y=0, z=1):
-    """Rotate by phi radians about axis defined by (x, y, z),
+    '''Rotate by phi radians about axis defined by (x, y, z),
     (x,y,z) defaults to xy rotation where +phi is a counterclockwise rotation
-    """
+    '''
     veclen = np.sqrt(x ** 2 + y ** 2 + z ** 2)
     ux, uy, uz = x / veclen, y / veclen, z / veclen
     mat = np.identity(4)
@@ -49,17 +49,17 @@ def rotate_mat(phi, x=0, y=0, z=1):
 class TransformList(list):
 
     def translate(self, x=0, y=0, z=0):
-        self.append(("T", translate_mat(x, y, z)))
+        self.append(('T', translate_mat(x, y, z)))
 
     def scale(self, sx=1, sy=1, sz=1):
-        self.append(("S", scale_mat(sx, sy, sz)))
+        self.append(('S', scale_mat(sx, sy, sz)))
 
     def rotate(self, phi, x=0, y=0, z=1):
-        self.append(("R", rotate_mat(phi, x, y, z)))
+        self.append(('R', rotate_mat(phi, x, y, z)))
 
     def customTransform(self, mat, name=None):
         if name is None:
-            name = "C"
+            name = 'C'
         self.append((name, mat))
 
     def getComposition(self):
@@ -69,7 +69,7 @@ class TransformList(list):
         return result
 
     def doTransform(self, points):
-        """Accepts 2d or 3d points, always returns 3d points"""
+        '''Accepts 2d or 3d points, always returns 3d points'''
         pVecs = points.copy()
         if (points.shape[1] == 2):
             zeroVec = np.zeros((pVecs.shape[0], 1))
@@ -77,7 +77,7 @@ class TransformList(list):
         elif (points.shape[1] == 3):
             pass
         else:
-            raise Exception("in doTransform, points must have 2 or 3 coordinates")
+            raise Exception('in doTransform, points must have 2 or 3 coordinates')
         oneVec = np.ones((pVecs.shape[0], 1))
         pVecs = np.concatenate((pVecs, oneVec), axis=1)
         result = np.dot(self.getComposition(), pVecs.T)
@@ -86,8 +86,8 @@ class TransformList(list):
 
 
 class Transformable(point.PointList):
-    """Base clase for an object on which basic transforms are defined.
-    NOTE: transform application is deferred until apply_transforms() is called"""
+    '''Base clase for an object on which basic transforms are defined.
+    NOTE: transform application is deferred until apply_transforms() is called'''
     def __init__(self, *args, **kwargs):
         self.transforms = TransformList()
         super().__init__(*args, **kwargs)
