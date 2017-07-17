@@ -1,6 +1,7 @@
 '''polygon library'''
 import numpy as np
 from numpy.linalg import norm
+import itertools
 from . import iter_util
 from . import point
 from . import transform
@@ -71,8 +72,8 @@ class Polygon(transform.Transformable):
             if np.allclose(cprod, np.asarray((0, 0, 0))):  # early bail on collinear!
                 pass
             elif expected_normal is None:
-                expected_normal = unit(cprod)
-            elif not np.allclose(expected_normal, unit(cprod)):
+                expected_normal = np.fabs(unit(cprod))
+            elif not np.allclose(expected_normal, np.fabs(unit(cprod))):
                 result = False
                 break
         return result
@@ -114,9 +115,57 @@ class PolygonCoplanar(Polygon):
     def get_normal(self):
         '''returns vector normal to the polygon plane'''
         cprods = self.get_corner_vector_crossproducts()
+        result = cprods[0]
+        for cprod in cprods[1:]:
+            result += cprod
+        return unit(result)
+
+    def is_convex(self):
+        cprods = self.get_corner_vector_crossproducts()
+        expected_normal = None
+        result = True
         for cprod in cprods:
             if np.allclose(cprod, np.asarray((0, 0, 0))):  # early bail on collinear!
                 pass
-            else:
-                return unit(cprod)
+            elif expected_normal is None:
+                expected_normal = unit(cprod)
+            elif not np.allclose(expected_normal, unit(cprod)):
+                result = False
+                break
+        return result
+
+    def is_simple(self):
+        if self.is_convex():
+            return True
+        else:
+            # lifted from my old code
+            edges = self.get_edges()
+            for edge_idx_pair in itertools.combinations(range(len(self.arr)), 2):
+                if np.allclose(((edge_idx_pair[0] + 1) % len(edges)), edge_idx_pair[1]):
+                    # print("adjacent")
+                    continue
+                elif np.allclose(((edge_idx_pair[0] - 1) % len(edges)), edge_idx_pair[1]):
+                    # print("adjacent")
+                    continue
+                else:
+                    # DBGP(edge_idx_pair)
+                    # DBGP(edges[edge_idx_pair[0]])
+                    # DBGP(edges[edge_idx_pair[1]])
+                    # print("** NOT adjacent **")
+                    if (is_edge_intersect(edges[edge_idx_pair[0]], edges[edge_idx_pair[1]])):
+                        # print("** Intersected! **")
+                        return False
+            return True
+        return self._simple
+
+
+def is_edge_intersect(edge0, edge1):
+    left = max(min(edge0[0][0], edge0[1][0]), min(edge1[0][0], edge1[1][0]))
+    right = min(max(edge0[0][0], edge0[1][0]), max(edge1[0][0], edge1[1][0]))
+    top = max(min(edge0[0][1], edge0[1][1]), min(edge1[0][1], edge1[1][1]))
+    bottom = min(max(edge0[0][1], edge0[1][1]), max(edge1[0][1], edge1[1][1]))
+    if top > bottom or left > right:
+        return False
+    else:
+        return True
 

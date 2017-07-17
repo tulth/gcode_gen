@@ -19,6 +19,27 @@ test_square_skew = [[-1, -1, 0], [1, -1, 0], [1, 1, 1], [-1, 1, 0], ]
 # square squashed down so all points lie along a line
 test_all_colin = [[-1, -1, 0], [1, -1, 0], [2, -1, 0], [0, -1, 0], ]
 
+square_notched = ((0, 0),
+                  (10, 0),
+                  (10, 4),
+                  (8, 4),
+                  (8, 6),
+                  (10, 6),
+                  (10, 10),
+                  (0, 10),
+                  )
+
+# botched = not simple
+square_botched = ((0, 0),
+                  (10, 0),
+                  (10, 4),
+                  (-2, 4),
+                  (-2, 6),
+                  (10, 6),
+                  (10, 10),
+                  (0, 10),
+                  )
+
 
 class TestPolygon(unittest.TestCase):
 
@@ -110,6 +131,10 @@ class TestPolygon(unittest.TestCase):
         #
         tp = poly.Polygon(point.PointList_from_list(test_all_colin))
         self.assertTrue(tp.is_coplanar())
+        #
+        #
+        tp = poly.Polygon(point.PointList_from_list(square_notched))
+        self.assertTrue(tp.is_coplanar())
 
     def test_is_all_collinear(self):
         sqr = poly.Polygon(point.PointList_from_list(test_square))
@@ -181,4 +206,31 @@ class TestPolygonCoplanar(unittest.TestCase):
         actual = tp.get_normal()
         expect = [0, -1, 0]
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
+        #
+        tp = poly.PolygonCoplanar(point.PointList_from_list(square_notched))
+        actual = tp.get_normal()
+        expect = [0, 0, 1]
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
+
+    def test_is_convex(self):
+        #
+        tp = poly.PolygonCoplanar(point.PointList_from_list(test_square))
+        self.assertTrue(tp.is_convex())
+        #
+        tp = poly.PolygonCoplanar(point.PointList_from_list(square_notched))
+        self.assertFalse(tp.is_convex())
+        #
+        tp = poly.PolygonCoplanar(point.PointList_from_list(square_botched))
+        self.assertFalse(tp.is_convex())
+
+    def test_is_simple(self):
+        #
+        tp = poly.PolygonCoplanar(point.PointList_from_list(test_square))
+        self.assertTrue(tp.is_simple())
+        #
+        tp = poly.PolygonCoplanar(point.PointList_from_list(square_notched))
+        self.assertTrue(tp.is_simple())
+        #
+        tp = poly.PolygonCoplanar(point.PointList_from_list(square_botched))
+        self.assertFalse(tp.is_simple())
 
