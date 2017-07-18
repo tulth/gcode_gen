@@ -1,10 +1,12 @@
 '''polygon library'''
 import numpy as np
 from numpy.linalg import norm
+import math
 import itertools
 from . import iter_util
 from . import point
 from . import transform
+from .debug import DBGP
 
 
 def unit(vec):
@@ -103,22 +105,43 @@ class Polygon(transform.Transformable):
     #     return np.sign(self.get_corner_vector_crossproducts())
 
 
-class PolygonCoplanar(Polygon):
+class CoplanarPolygon(Polygon):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.is_coplanar():
-            raise PolygonException("PolygonCoplanar vertices must be coplanar")
+            raise PolygonException("CoplanarPolygon vertices must be coplanar")
         if self.is_all_collinear():
-            raise PolygonException("PolygonCoplanar vertices must not all be collinear")
+            raise PolygonException("CoplanarPolygon vertices must not all be collinear")
 
     def get_normal(self):
-        '''returns vector normal to the polygon plane'''
+        '''returns unit vector normal to the polygon plane'''
         cprods = self.get_corner_vector_crossproducts()
         result = cprods[0]
         for cprod in cprods[1:]:
             result += cprod
         return unit(result)
+
+    def get_corner_angle_class(self):
+        '''return a list of numbers, one per corner matching the vertex order,
+        where the value is:
+        -1 if the corner interior angle is > Pi (reflex angle) (concave)
+         0 if the corner interior angle is Pi (straight angle) (collinear)
+         1 if the corner interior angle is < Pi (acute, right, or obtuse angle) (convex)
+         '''
+        cprods = self.get_corner_vector_crossproducts()
+        poly_normal = self.get_normal()
+        result = []
+        for cprod in cprods:
+            if np.allclose(cprod, np.asarray((0, 0, 0))):  # early test on collinear to prevent div0
+                result.append(0)
+            elif np.allclose(poly_normal, unit(cprod)):
+                result.append(1)
+            elif np.allclose(poly_normal, -unit(cprod)):
+                result.append(-1)
+            else:
+                PolygonException("Unexpected error in get_corner_angle_class()")
+        return result
 
     def is_convex(self):
         cprods = self.get_corner_vector_crossproducts()
@@ -169,3 +192,46 @@ def is_edge_intersect(edge0, edge1):
     else:
         return True
 
+
+class SimplePolygon(CoplanarPolygon):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_simple():
+            raise PolygonException("SimplePolygon vertices must form a simple polygon's mathematical definition")
+
+    def shrink(self, amount):
+        poly_normal = self.get_normal()
+        correction_vecs = []
+        for corner_vecs, corner_class in zip(self.get_corner_vectors(), self.get_corner_angle_class()):
+            # DBGP(corner_vecs)
+            # DBGP(corner_class)
+            u_prev_vec = unit(corner_vecs[0])
+            u_next_vec = unit(corner_vecs[1])
+            # DBGP(u_prev_vec)
+            # DBGP(u_next_vec)
+            if corner_class == 0:  # straight, handle first to avoid div0
+                u_correction_vec = unit(np.cross(poly_normal, u_prev_vec))
+                correction_vec_len = amount
+            elif corner_class == 1:  # convex
+                u_correction_vec = unit(-u_prev_vec + u_next_vec)
+            elif corner_class == -1:  # concave
+                u_correction_vec = -unit(-u_prev_vec + u_next_vec)
+            # DBGP(u_correction_vec)
+            if corner_class == 0:  # straight, handle first to avoid div0
+                correction_vec_len = amount
+            else:
+                # correction_vec_len = amount / np.cross(u_next_vec, u_correction_vec)
+                dot_prod = np.dot(u_correction_vec, u_next_vec)
+                base_correction_len = np.sqrt(1 / (1 - (dot_prod**2)))
+                # DBGP(base_correction_len)
+                correction_vec_len = amount * base_correction_len
+            # DBGP(correction_vec_len)
+            correction_vecs.append(correction_vec_len * u_correction_vec)
+        newVerts = point.PointList_from_list(self.arr + np.asarray(correction_vecs))
+        # DBGP(newVerts.arr)
+        result = SimplePolygon(newVerts)
+        return result
+
+    def grow(self, amount):
+        return self.shrink(-amount)
