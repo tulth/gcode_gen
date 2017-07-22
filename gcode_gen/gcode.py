@@ -4,10 +4,22 @@ Library for gcode commands objects that render to strings.
 from .number import num2str
 
 
-class GcodeCoordXYZ(object):
+class GcodePoint(object):
 
     def __init__(self, x=None, y=None, z=None):
         self.xyz = (x, y, z)
+
+    @property
+    def x(self):
+        return self.xyz[0]
+
+    @property
+    def y(self):
+        return self.xyz[1]
+
+    @property
+    def z(self):
+        return self.xyz[2]
 
     def __str__(self):
         ret_list = []
@@ -21,7 +33,7 @@ class BaseGcode(object):
     def __init__(self, cmd, x=None, y=None, z=None):
         super().__init__()
         self.cmd = cmd
-        self.point = GcodeCoordXYZ(x, y, z)
+        self.point = GcodePoint(x, y, z)
 
     def __str__(self):
         point_str = str(self.point)

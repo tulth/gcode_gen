@@ -1,4 +1,3 @@
-#!/usr/bin/env python Sample Test passing with nose and pytest
 import unittest
 import numpy as np
 from gcode_gen import number

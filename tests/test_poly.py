@@ -46,28 +46,28 @@ class TestPolygon(unittest.TestCase):
     def test_too_few_vertices(self):
         actual = ""
         try:
-            sqr = poly.Polygon(point.PointList_from_list(test_square[0:0]))
-        except poly.PolygonException as err:
+            sqr = poly.Polygon(point.PointList(test_square[0:0]))
+        except poly.PolygonError as err:
             actual = str(err)
         expect = "Polygon vertices initializer must have at least 3 vertices"
         self.assertEqual(actual, expect)
         #
         actual = ""
         try:
-            sqr = poly.Polygon(point.PointList_from_list(test_square[0:1]))
-        except poly.PolygonException as err:
+            sqr = poly.Polygon(point.PointList(test_square[0:1]))
+        except poly.PolygonError as err:
             actual = str(err)
         expect = "Polygon vertices initializer must have at least 3 vertices"
         self.assertEqual(actual, expect)
 
     def test_get_vertices(self):
-        sqr = poly.Polygon(point.PointList_from_list(test_square))
+        sqr = poly.Polygon(point.PointList(test_square))
         actual = sqr.get_vertices()
         expect = test_square
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_get_edges(self):
-        sqr = poly.Polygon(point.PointList_from_list(test_square))
+        sqr = poly.Polygon(point.PointList(test_square))
         actual = sqr.get_edges()
         # expect are the 4 edges
         expect = [[[-1, -1, 0], [1, -1, 0]],
@@ -78,7 +78,7 @@ class TestPolygon(unittest.TestCase):
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_get_corners(self):
-        sqr = poly.Polygon(point.PointList_from_list(test_square))
+        sqr = poly.Polygon(point.PointList(test_square))
         actual = sqr.get_corners()
         # expect are the 4 corners
         expect = [[[[-1, 1, 0], [-1, -1, 0]], [[-1, -1, 0], [1, -1, 0]]],
@@ -89,7 +89,7 @@ class TestPolygon(unittest.TestCase):
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_get_corner_vectors(self):
-        sqr = poly.Polygon(point.PointList_from_list(test_square))
+        sqr = poly.Polygon(point.PointList(test_square))
         actual = sqr.get_corner_vectors()
         # expect are the 4 corners
         expect = [[[0, -2, 0], [2, 0, 0]],
@@ -100,7 +100,7 @@ class TestPolygon(unittest.TestCase):
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_get_corner_vector_crossproducts(self):
-        sqr = poly.Polygon(point.PointList_from_list(test_square))
+        sqr = poly.Polygon(point.PointList(test_square))
         actual = sqr.get_corner_vector_crossproducts()
         expect = [[0, 0, 4],
                   [0, 0, 4],
@@ -109,7 +109,7 @@ class TestPolygon(unittest.TestCase):
                   ]
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
         #
-        sqrc = poly.Polygon(point.PointList_from_list(test_square_colin))
+        sqrc = poly.Polygon(point.PointList(test_square_colin))
         actual = sqrc.get_corner_vector_crossproducts()
         expect = [[0, 0, 2],
                   [0, 0, 0],
@@ -120,43 +120,43 @@ class TestPolygon(unittest.TestCase):
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_is_coplanar(self):
-        sqr = poly.Polygon(point.PointList_from_list(test_square))
+        sqr = poly.Polygon(point.PointList(test_square))
         self.assertTrue(sqr.is_coplanar())
         #
-        sqrc = poly.Polygon(point.PointList_from_list(test_square_colin))
+        sqrc = poly.Polygon(point.PointList(test_square_colin))
         self.assertTrue(sqrc.is_coplanar())
         #
-        sqr_skew = poly.Polygon(point.PointList_from_list(test_square_skew))
+        sqr_skew = poly.Polygon(point.PointList(test_square_skew))
         self.assertFalse(sqr_skew.is_coplanar())
         #
-        tp = poly.Polygon(point.PointList_from_list(test_all_colin))
+        tp = poly.Polygon(point.PointList(test_all_colin))
         self.assertTrue(tp.is_coplanar())
         #
         #
-        tp = poly.Polygon(point.PointList_from_list(square_notched))
+        tp = poly.Polygon(point.PointList(square_notched))
         self.assertTrue(tp.is_coplanar())
 
     def test_is_all_collinear(self):
-        sqr = poly.Polygon(point.PointList_from_list(test_square))
+        sqr = poly.Polygon(point.PointList(test_square))
         self.assertFalse(sqr.is_all_collinear())
         #
-        sqrc = poly.Polygon(point.PointList_from_list(test_square_colin))
+        sqrc = poly.Polygon(point.PointList(test_square_colin))
         self.assertFalse(sqrc.is_all_collinear())
         #
-        sqr_skew = poly.Polygon(point.PointList_from_list(test_square_skew))
+        sqr_skew = poly.Polygon(point.PointList(test_square_skew))
         self.assertFalse(sqr_skew.is_all_collinear())
         #
-        tp = poly.Polygon(point.PointList_from_list(test_all_colin))
+        tp = poly.Polygon(point.PointList(test_all_colin))
         self.assertTrue(tp.is_all_collinear())
 
     # def test_get_orientations(self):
-    #     # tp = poly.CoplanarPolygon(point.PointList_from_list(test_square))
+    #     # tp = poly.CoplanarPolygon(point.PointList(test_square))
     #     # actual = tp.get_orientations()
     #     # print(actual)
     #     # expect = [1, 1, 1, 1]
     #     # self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
     #     #
-    #     tp = poly.CoplanarPolygon(point.PointList_from_list(test_square_colin))
+    #     tp = poly.CoplanarPolygon(point.PointList(test_square_colin))
     #     actual = tp.get_orientations()
     #     print(actual)
     #     expect = [1, 0, 1, 1, 1]
@@ -167,71 +167,71 @@ class TestPolygon(unittest.TestCase):
 class TestCoplanarPolygon(unittest.TestCase):
 
     def test_get_normal(self):
-        tp = poly.CoplanarPolygon(point.PointList_from_list(test_square))
+        tp = poly.CoplanarPolygon(point.PointList(test_square))
         actual = tp.get_normal()
         expect = [0, 0, 1]
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
         #
-        tp = poly.CoplanarPolygon(point.PointList_from_list(test_square_colin))
+        tp = poly.CoplanarPolygon(point.PointList(test_square_colin))
         actual = tp.get_normal()
         expect = [0, 0, 1]
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
         #
         actual = ""
         try:
-            tp = poly.CoplanarPolygon(point.PointList_from_list(test_square_skew))
-        except poly.PolygonException as err:
+            tp = poly.CoplanarPolygon(point.PointList(test_square_skew))
+        except poly.PolygonError as err:
             actual = str(err)
         expect = "CoplanarPolygon vertices must be coplanar"
         self.assertEqual(actual, expect)
         #
         actual = ""
         try:
-            tp = poly.CoplanarPolygon(point.PointList_from_list(test_all_colin))
-        except poly.PolygonException as err:
+            tp = poly.CoplanarPolygon(point.PointList(test_all_colin))
+        except poly.PolygonError as err:
             actual = str(err)
         expect = "CoplanarPolygon vertices must not all be collinear"
         self.assertEqual(actual, expect)
         # try rotated square
-        tp = poly.CoplanarPolygon(point.PointList_from_list(test_square))
+        tp = poly.CoplanarPolygon(point.PointList(test_square))
         tp.rotate(np.pi / 4, x=0, y=1, z=0)
-        tp.apply_transforms()
+        tp = tp.apply_transforms()
         actual = tp.get_normal()
         expect = [sqrt(2) / 2, 0, sqrt(2) / 2]
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
         # try another rotated square
-        tp = poly.CoplanarPolygon(point.PointList_from_list(test_square))
+        tp = poly.CoplanarPolygon(point.PointList(test_square))
         tp.rotate(np.pi / 2, x=1, y=0, z=0)
-        tp.apply_transforms()
+        tp = tp.apply_transforms()
         actual = tp.get_normal()
         expect = [0, -1, 0]
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
         #
-        tp = poly.CoplanarPolygon(point.PointList_from_list(square_notched))
+        tp = poly.CoplanarPolygon(point.PointList(square_notched))
         actual = tp.get_normal()
         expect = [0, 0, 1]
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_is_convex(self):
         #
-        tp = poly.CoplanarPolygon(point.PointList_from_list(test_square))
+        tp = poly.CoplanarPolygon(point.PointList(test_square))
         self.assertTrue(tp.is_convex())
         #
-        tp = poly.CoplanarPolygon(point.PointList_from_list(square_notched))
+        tp = poly.CoplanarPolygon(point.PointList(square_notched))
         self.assertFalse(tp.is_convex())
         #
-        tp = poly.CoplanarPolygon(point.PointList_from_list(square_botched))
+        tp = poly.CoplanarPolygon(point.PointList(square_botched))
         self.assertFalse(tp.is_convex())
 
     def test_is_simple(self):
         #
-        tp = poly.CoplanarPolygon(point.PointList_from_list(test_square))
+        tp = poly.CoplanarPolygon(point.PointList(test_square))
         self.assertTrue(tp.is_simple())
         #
-        tp = poly.CoplanarPolygon(point.PointList_from_list(square_notched))
+        tp = poly.CoplanarPolygon(point.PointList(square_notched))
         self.assertTrue(tp.is_simple())
         #
-        tp = poly.CoplanarPolygon(point.PointList_from_list(square_botched))
+        tp = poly.CoplanarPolygon(point.PointList(square_botched))
         self.assertFalse(tp.is_simple())
 
 
@@ -241,13 +241,13 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 0.],
                      [10., 10.],
                      [0., 10.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[1., 1.],
                   [9., 1.],
                   [9., 9.],
                   [1., 9.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_square(self):
@@ -255,13 +255,13 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 0.],
                      [10., 10.],
                      [0., 10.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-0.5, -0.5],
                   [10.5, -0.5],
                   [10.5, 10.5],
                   [-0.5, 10.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_square_rev(self):
@@ -269,13 +269,13 @@ class TestSimplePolygon(unittest.TestCase):
                      [0., 10.],
                      [10., 10.],
                      [10., 0.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[1., 1.],
                   [1., 9.],
                   [9., 9.],
                   [9., 1.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_square_rev(self):
@@ -283,13 +283,13 @@ class TestSimplePolygon(unittest.TestCase):
                      [0., 10.],
                      [10., 10.],
                      [10., 0.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-0.5, -0.5],
                   [-0.5, 10.5],
                   [10.5, 10.5],
                   [10.5, -0.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_square_collinear(self):
@@ -298,14 +298,14 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 0.],
                      [10., 10.],
                      [0., 10.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[1., 1.],
                   [5., 1.],
                   [9., 1.],
                   [9., 9.],
                   [1., 9.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_square_collinear(self):
@@ -314,14 +314,14 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 0.],
                      [10., 10.],
                      [0., 10.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-0.5, -0.5],
                   [5., -0.5],
                   [10.5, -0.5],
                   [10.5, 10.5],
                   [-0.5, 10.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_square_collinear_rev(self):
@@ -330,14 +330,14 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 10.],
                      [10., 0.],
                      [5., 0.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[1., 1.],
                   [1., 9.],
                   [9., 9.],
                   [9., 1.],
                   [5., 1.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_square_collinear_rev(self):
@@ -346,14 +346,14 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 10.],
                      [10., 0.],
                      [5., 0.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-0.5, -0.5],
                   [-0.5, 10.5],
                   [10.5, 10.5],
                   [10.5, -0.5],
                   [5., -0.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_hexagon(self):
@@ -363,7 +363,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [4.61880215, 0.],
                      [2.30940108, 4.],
                      [-2.30940108, 4.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(HEX_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(HEX_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[-3.46410162, 0.],
                   [-1.73205081, -3.],
@@ -371,7 +371,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [3.46410162, 0.],
                   [1.73205081, 3.],
                   [-1.73205081, 3.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_hexagon(self):
@@ -381,7 +381,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [4.61880215, 0.],
                      [2.30940108, 4.],
                      [-2.30940108, 4.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(HEX_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(HEX_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-5.19615242, 0.],
                   [-2.59807621, -4.5],
@@ -389,7 +389,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [5.19615242, 0.],
                   [2.59807621, 4.5],
                   [-2.59807621, 4.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_hexagon_rev(self):
@@ -399,7 +399,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [4.61880215, 0.],
                      [2.30940108, -4.],
                      [-2.30940108, -4.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(HEX_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(HEX_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[-3.46410162, 0.],
                   [-1.73205081, 3.],
@@ -407,7 +407,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [3.46410162, 0.],
                   [1.73205081, -3.],
                   [-1.73205081, -3.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_hexagon_rev(self):
@@ -417,7 +417,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [4.61880215, 0.],
                      [2.30940108, -4.],
                      [-2.30940108, -4.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(HEX_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(HEX_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-5.19615242, 0.],
                   [-2.59807621, 4.5],
@@ -425,7 +425,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [5.19615242, 0.],
                   [2.59807621, -4.5],
                   [-2.59807621, -4.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_square_notched(self):
@@ -437,7 +437,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 6.],
                      [10., 10.],
                      [0., 10.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[1., 1.],
                   [9., 1.],
@@ -447,7 +447,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [9., 7.],
                   [9., 9.],
                   [1., 9.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_square_notched(self):
@@ -459,7 +459,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 6.],
                      [10., 10.],
                      [0., 10.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-0.5, -0.5],
                   [10.5, -0.5],
@@ -469,7 +469,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [10.5, 5.5],
                   [10.5, 10.5],
                   [-0.5, 10.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_square_notched_rev(self):
@@ -481,7 +481,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [8., 4.],
                      [10., 4.],
                      [10., 0.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[1., 1.],
                   [1., 9.],
@@ -491,7 +491,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [7., 3.],
                   [9., 3.],
                   [9., 1.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_square_notched_rev(self):
@@ -503,7 +503,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [8., 4.],
                      [10., 4.],
                      [10., 0.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-0.5, -0.5],
                   [-0.5, 10.5],
@@ -513,7 +513,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [8.5, 4.5],
                   [10.5, 4.5],
                   [10.5, -0.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_square_smashed(self):
@@ -521,13 +521,13 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 0.],
                      [4., 4.],
                      [0., 10.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[1., 1.],
                   [6.69722436, 1.],
                   [3.27888974, 3.27888974],
                   [1., 6.69722436]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_square_smashed(self):
@@ -535,13 +535,13 @@ class TestSimplePolygon(unittest.TestCase):
                      [10., 0.],
                      [4., 4.],
                      [0., 10.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-0.5, -0.5],
                   [11.65138782, -0.5],
                   [4.36055513, 4.36055513],
                   [-0.5, 11.65138782]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_square_smashed_rev(self):
@@ -549,13 +549,13 @@ class TestSimplePolygon(unittest.TestCase):
                      [0., 10.],
                      [4., 4.],
                      [10., 0.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[1., 1.],
                   [1., 6.69722436],
                   [3.27888974, 3.27888974],
                   [6.69722436, 1.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_square_smashed_rev(self):
@@ -563,13 +563,13 @@ class TestSimplePolygon(unittest.TestCase):
                      [0., 10.],
                      [4., 4.],
                      [10., 0.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(SQR_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(SQR_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-0.5, -0.5],
                   [-0.5, 11.65138782],
                   [4.36055513, 4.36055513],
                   [11.65138782, -0.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_hexagon_smashed(self):
@@ -579,7 +579,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [0., 0.],
                      [2.30940108, 4.],
                      [-2.30940108, 4.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(HEX_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(HEX_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[-3.46410162, 0.],
                   [-1.73205081, -3.],
@@ -587,7 +587,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [-1.15470054, 0.],
                   [0.57735027, 3.],
                   [-1.73205081, 3.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_hexagon_smashed(self):
@@ -597,7 +597,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [0., 0.],
                      [2.30940108, 4.],
                      [-2.30940108, 4.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(HEX_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(HEX_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-5.19615242, 0.],
                   [-2.59807621, -4.5],
@@ -605,7 +605,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [0.57735027, 0.],
                   [3.17542648, 4.5],
                   [-2.59807621, 4.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_shrink_hexagon_smashed_rev(self):
@@ -615,7 +615,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [0., 0.],
                      [2.30940108, -4.],
                      [-2.30940108, -4.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(HEX_VERTS)).shrink(1)
+        tp = poly.SimplePolygon(point.PointList(HEX_VERTS)).shrink(1)
         actual = tp.arr
         expect = [[-3.46410162, 0.],
                   [-1.73205081, 3.],
@@ -623,7 +623,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [-1.15470054, 0.],
                   [0.57735027, -3.],
                   [-1.73205081, -3.]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_grow_hexagon_smashed_rev(self):
@@ -633,7 +633,7 @@ class TestSimplePolygon(unittest.TestCase):
                      [0., 0.],
                      [2.30940108, -4.],
                      [-2.30940108, -4.]]
-        tp = poly.SimplePolygon(point.PointList_from_list(HEX_VERTS)).grow(0.5)
+        tp = poly.SimplePolygon(point.PointList(HEX_VERTS)).grow(0.5)
         actual = tp.arr
         expect = [[-5.19615242, 0.],
                   [-2.59807621, 4.5],
@@ -641,7 +641,7 @@ class TestSimplePolygon(unittest.TestCase):
                   [0.57735027, 0.],
                   [3.17542648, -4.5],
                   [-2.59807621, -4.5]]
-        expect = point.PointList_from_list(expect).arr
+        expect = point.PointList(expect).arr
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     def test_invalid_relay_outline(self):
@@ -659,8 +659,8 @@ class TestSimplePolygon(unittest.TestCase):
                      [30.8737, 6.5405]]
         actual = ""
         try:
-            tp = poly.SimplePolygon(point.PointList_from_list(TST_VERTS))
-        except poly.PolygonException as err:
+            tp = poly.SimplePolygon(point.PointList(TST_VERTS))
+        except poly.PolygonError as err:
             actual = str(err)
         expect = "SimplePolygon vertices must form a simple polygon's mathematical definition"
         self.assertEqual(actual, expect)

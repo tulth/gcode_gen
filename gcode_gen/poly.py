@@ -14,24 +14,22 @@ def unit(vec):
     return vec / norm(vec)
 
 
-class PolygonException(Exception):
+class PolygonError(Exception):
     pass
 
 
-class Polygon(transform.Transformable):
+class Polygon(transform.TransformablePointList):
     '''Polygon of 3d points.
     This polygon may represent a skew polygon, but this limits the useful methods on it.
     The vertex initializer argument assumes there is an edge between each point and the next, with an
     additional edge between the last point and the first.
     For example, for a 2x2 square centered at origin in x/y plane
-    sqr = Polygon(PointList_from_list([[-1, -1, 0], [1, -1, 0], [1, 1, 0], [-1, 1, 0], ]))
+    sqr = Polygon(PointList([[-1, -1, 0], [1, -1, 0], [1, 1, 0], [-1, 1, 0], ]))
 '''
     def __init__(self, vertices=None):
-        if not isinstance(vertices, point.PointList):
-            raise PolygonException("Polygon vertices initializer must be of type point.PointList")
-        if len(vertices) < 3:
-            raise PolygonException("Polygon vertices initializer must have at least 3 vertices")
         super().__init__(vertices)
+        if len(self) < 3:
+            raise PolygonError("Polygon vertices initializer must have at least 3 vertices")
 
     def get_vertices(self):
         '''Return vertices with implied connection between each and the next.
@@ -110,9 +108,9 @@ class CoplanarPolygon(Polygon):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.is_coplanar():
-            raise PolygonException("CoplanarPolygon vertices must be coplanar")
+            raise PolygonError("CoplanarPolygon vertices must be coplanar")
         if self.is_all_collinear():
-            raise PolygonException("CoplanarPolygon vertices must not all be collinear")
+            raise PolygonError("CoplanarPolygon vertices must not all be collinear")
 
     def get_normal(self):
         '''returns unit vector normal to the polygon plane'''
@@ -140,7 +138,7 @@ class CoplanarPolygon(Polygon):
             elif np.allclose(poly_normal, -unit(cprod)):
                 result.append(-1)
             else:
-                PolygonException("Unexpected error in get_corner_angle_class()")
+                PolygonError("Unexpected error in get_corner_angle_class()")
         return result
 
     def is_convex(self):
@@ -198,7 +196,7 @@ class SimplePolygon(CoplanarPolygon):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.is_simple():
-            raise PolygonException("SimplePolygon vertices must form a simple polygon's mathematical definition")
+            raise PolygonError("SimplePolygon vertices must form a simple polygon's mathematical definition")
 
     def shrink(self, amount):
         poly_normal = self.get_normal()
@@ -228,7 +226,7 @@ class SimplePolygon(CoplanarPolygon):
                 correction_vec_len = amount * base_correction_len
             # DBGP(correction_vec_len)
             correction_vecs.append(correction_vec_len * u_correction_vec)
-        newVerts = point.PointList_from_list(self.arr + np.asarray(correction_vecs))
+        newVerts = point.PointList(self.arr + np.asarray(correction_vecs))
         # DBGP(newVerts.arr)
         result = SimplePolygon(newVerts)
         return result

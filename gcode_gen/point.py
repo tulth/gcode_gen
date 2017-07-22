@@ -2,57 +2,121 @@
 A basic base class for point and point lists
 '''
 import numpy as np
+from collections.abc import MutableSequence, Iterable
 
 
 class PointException(Exception):
     pass
 
 
-class Point(object):
+class XYZ(object):
+    '''Tuple of x, y, z where the types of x/y/z could be anything
+    Not intended to be mutable!
+    '''
+    def __init__(self, x=None, y=None, z=None):
+        self.xyz = (x, y, z)
 
+    @property
+    def arr(self):
+        return self.xyz
+
+    @property
+    def x(self):
+        return self.xyz[0]
+
+    @property
+    def y(self):
+        return self.xyz[1]
+
+    @property
+    def z(self):
+        return self.xyz[2]
+
+
+class Point(XYZ):
+    '''Point class for representing 3-d x/y/z cartesian coordinates.
+    x/y/z elements are 64 bit floats
+    x/y/z not specified are assumed to be zero
+    Not intended to be mutable!
+    '''
     def __init__(self, x=0, y=0, z=0):
-        self.arr = np.array((x, y, z), dtype=np.float64)
+        self.xyz = np.array((x, y, z), dtype=np.float64)
+
+    def copy(self):
+        return self.__copy__()
+
+    def __copy__(self):
+        return Point(*self.xyz.copy())
 
 
-class PointList(object):
-    '''An array of 3-d points, suitable for doing matrix transforms on.
-    Use self.arr to access the points array
-    self.array is a 4-d numpy array of float64
-    self.arr index 0 is the point index
-    self.arr indices 1-3 correspond to the x, y, and z values
-    add points using .append()
-    extend
+class PointList(MutableSequence):
+    '''A list of 3-d Points.
+    Underlying representation is a 4-d numpy array of np.float64
+    Access points within the array like any other list.
+    While the list is mutable, the points within the list are not intended to be.
+    Note: slice assignment is not supported
     '''
     def __init__(self, arg=None):
-        self.arr = np.empty((0, 3), dtype=np.float64)
-        if arg is not None:
-            if isinstance(arg, PointList):
-                self.extend(arg)
-            elif isinstance(arg, Point):
-                self.append(arg)
+        if arg is None:
+            self._arr = np.empty((0, 3), dtype=np.float64)
+        else:
+            cast_arg = np.asarray((self._cast_arr(arg)), dtype=np.float64)
+            # print(cast_arg)
+            # print(type(cast_arg))
+            self._arr = cast_arg
+
+    def _cast_arr(self, arg):  # cast arg to np array suitable for extending/inserting PointList
+        err = TypeError('cannot cast type={} val={}'.format(type(arg), arg))
+        if isinstance(arg, PointList):
+            return arg.arr
+        elif isinstance(arg, Point):
+            return np.asarray((arg.arr))
+        elif isinstance(arg, np.ndarray):
+            if len(arg.shape) == 1:
+                return np.asarray(((Point(*arg).arr, )))
+            elif len(arg.shape) == 2 and arg.shape[1] == 3:
+                return arg
             else:
-                raise PointException('PointList append given non Point/PointList initializer')
+                raise err
+        elif isinstance(arg, Iterable):
+            return np.asarray([Point(*raw_point).arr for raw_point in arg])
+        else:
+            raise err
 
-    def append(self, p):
-        if not isinstance(p, Point):
-            raise PointException('PointList append given non Point argument')
-        self.arr = np.append(self.arr, p.arr.reshape(1, 3), axis=0)
+    @property
+    def arr(self):
+        return self._arr
 
-    def extend(self, point_list):
-        assert isinstance(point_list, PointList)
-        self.arr = np.concatenate((self.arr, point_list.arr), axis=0)
+    @property
+    def shape(self):
+        return self.arr.shape
+
+    def __getitem__(self, index):
+        # print("__getitem__", index)
+        if len(self) == 0:
+            raise IndexError('attempt to deference an empty PointList')
+        elif isinstance(index, int):
+            return Point(*self._arr[index])
+        elif isinstance(index, slice):
+            # raise KeyError('slice access not supported')
+            return PointList(self._arr[index])
+        else:
+            raise TypeError('Invalid index/slice type')
+
+    def __setitem__(self, index, value):
+        if isinstance(index, slice):
+            raise KeyError('slice assignment not supported')
+        # print("__setitem__", index, value)
+        self._arr[index, :] = value
+
+    def __delitem__(self, index):
+        raise NotImplementedError("deletion not supported")
 
     def __len__(self):
         return self.arr.shape[0]
 
-
-def PointList_from_list(arg_list):
-    '''helpful alternate constructor for pointlist from a standard python list of lists'''
-    result = PointList()
-    for raw_point in arg_list:
-        point = Point(*raw_point)
-        result.append(point)
-    return result
-
-
-
+    def insert(self, index, value):
+        # print("insert", index, value)
+        if isinstance(index, slice):
+            raise KeyError('slice assignment not supported')
+        self._arr = np.insert(self._arr, index, value.arr.reshape(1, 3), axis=0)

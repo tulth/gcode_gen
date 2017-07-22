@@ -57,37 +57,34 @@ class TransformList(list):
     def rotate(self, phi, x=0, y=0, z=1):
         self.append(('R', rotate_mat(phi, x, y, z)))
 
-    def customTransform(self, mat, name=None):
+    def matrix_transform(self, mat, name=None):
         if name is None:
-            name = 'C'
+            name = 'M'
         self.append((name, mat))
 
-    def getComposition(self):
+    def get_composition(self):
         result = np.identity(4)
         for (id, mat) in self:
             result = np.dot(mat, result)
         return result
 
-    def doTransform(self, points):
-        '''Accepts 2d or 3d points, always returns 3d points'''
-        pVecs = points.copy()
-        if (points.shape[1] == 2):
-            zeroVec = np.zeros((pVecs.shape[0], 1))
-            pVecs = np.concatenate((pVecs, zeroVec), axis=1)
-        elif (points.shape[1] == 3):
-            pass
-        else:
-            raise Exception('in doTransform, points must have 2 or 3 coordinates')
-        oneVec = np.ones((pVecs.shape[0], 1))
-        pVecs = np.concatenate((pVecs, oneVec), axis=1)
-        result = np.dot(self.getComposition(), pVecs.T)
+    def __call__(self, arr):
+        if not isinstance(arr, np.ndarray):
+            raise TypeError("expected argument to be numpy ndarray")
+        if len(arr.shape) != 2:
+            raise TypeError("expected argument.shape to be length 2")
+        if arr.shape[1] != 3:
+            raise TypeError("expected argument to be array of 3-d points")
+        if arr.shape[0] == 0:
+            raise IndexError("expected at least one point!")
+        one_vec = np.ones((arr.shape[0], 1))
+        point_vectors = np.concatenate((arr, one_vec), axis=1)
+        result = np.dot(self.get_composition(), point_vectors.T)
         result = result[:-1].T
         return result
 
 
-class Transformable(point.PointList):
-    '''Base clase for an object on which basic transforms are defined.
-    NOTE: transform application is deferred until apply_transforms() is called'''
+class TransformableMixin(object):
     def __init__(self, *args, **kwargs):
         self.transforms = TransformList()
         super().__init__(*args, **kwargs)
@@ -104,9 +101,22 @@ class Transformable(point.PointList):
         self.transforms.rotate(phi, x, y, z)
         return self
 
-    def customTransform(self, mat, name=None):
-        self.transforms.customTransform(mat, name)
+    def matrix_transform(self, mat, name=None):
+        self.transforms.matrix_transform(mat, name)
         return self
 
     def apply_transforms(self):
-        self.arr = self.transforms.doTransform(self.arr)
+        '''Define in subclass.  Typically of the form:
+        return self.transforms(point_array)'''
+        raise NotImplementedError()
+
+
+class TransformablePointList(TransformableMixin, point.PointList):
+    '''Base clase for an object on which basic transforms are defined.
+    NOTE: transform application is deferred until apply_transforms() is called'''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def apply_transforms(self):
+        '''Note! returns a copy! does not transform in place!'''
+        return self.__class__(self.transforms(self.arr))
