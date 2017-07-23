@@ -2,25 +2,10 @@
 Library for gcode commands objects that render to strings.
 '''
 from .number import num2str
+from .point import XYZ
 
 
-class GcodePoint(object):
-
-    def __init__(self, x=None, y=None, z=None):
-        self.xyz = (x, y, z)
-
-    @property
-    def x(self):
-        return self.xyz[0]
-
-    @property
-    def y(self):
-        return self.xyz[1]
-
-    @property
-    def z(self):
-        return self.xyz[2]
-
+class GcodePoint(XYZ):
     def __str__(self):
         ret_list = []
         for label, val in zip(('X', 'Y', 'Z'), self.xyz):

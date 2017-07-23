@@ -80,8 +80,27 @@ class TestTree(unittest.TestCase):
                   'move:up',
                   ]
         self.assertEqual(actual, expect)
-        for act, exp in zip(actual, expect):
-            self.assertEqual(act, exp)
+
+    def test_root_walk(self):
+        root = self.gen_test_tree()
+        actual = list(map(str, root.root_walk()))
+        expect = ['visit:preorder:root',
+                  'visit:postorder:root',
+                  ]
+        self.assertEqual(actual, expect)
+        #
+        g = root.children[1].children[1]
+        actual = list(map(str, g.root_walk()))
+        expect = ['visit:preorder:g',
+                  'move:up',
+                  'visit:preorder:b',
+                  'move:up',
+                  'visit:preorder:root',
+                  'visit:postorder:root',
+                  'visit:postorder:b',
+                  'visit:postorder:g',
+                  ]
+        self.assertEqual(actual, expect)
 
     def test_str(self):
         root = self.gen_test_tree()

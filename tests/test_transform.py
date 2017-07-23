@@ -77,3 +77,18 @@ class TestTransformable(unittest.TestCase):
         expect = np.asarray([[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1], ])
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
+    def test_str(self):
+        tl = transform.TransformList()
+        tl.translate(-1, -2)
+        tl.scale(5, 5)
+        actual = str(tl)
+        expect = '''('T', array([[ 1.,  0.,  0., -1.],
+       [ 0.,  1.,  0., -2.],
+       [ 0.,  0.,  1.,  0.],
+       [ 0.,  0.,  0.,  1.]]))
+('S', array([[ 5.,  0.,  0.,  0.],
+       [ 0.,  5.,  0.,  0.],
+       [ 0.,  0.,  1.,  0.],
+       [ 0.,  0.,  0.,  1.]]))
+'''
+        self.assertEqual(actual, expect)

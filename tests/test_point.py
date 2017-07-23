@@ -16,6 +16,37 @@ class TestPoint(unittest.TestCase):
         expect = np.asarray((1, 2, 3))
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
+    def test_point_changes(self):
+        p0 = point.Point(1, 2)
+        p1 = point.Point(1, 2)
+        actual = point.changes(p0, p1)
+        expect = {}
+        self.assertEqual(actual, expect)
+        #
+        p0 = point.Point(1, 2)
+        p1 = point.Point(1, 3)
+        actual = point.changes(p0, p1)
+        expect = {'y': 3}
+        self.assertEqual(actual, expect)
+        #
+        p0 = point.Point(1, 2, 6)
+        p1 = point.Point(1, 2)
+        actual = point.changes(p0, p1)
+        expect = {'z': 0}
+        self.assertEqual(actual, expect)
+        #
+        p0 = point.Point(1, 2)
+        p1 = point.Point(1, 2, 6)
+        actual = point.changes(p0, p1)
+        expect = {'z': 6}
+        self.assertEqual(actual, expect)
+        #
+        p0 = point.Point(2, 2, 7)
+        p1 = point.Point(2.1, 2.1)
+        actual = point.changes(p0, p1)
+        expect = {'x': 2.1, 'y': 2.1, 'z': 0}
+        self.assertEqual(actual, expect)
+
 
 class TestPointList(unittest.TestCase):
 
@@ -181,4 +212,5 @@ class TestPointList(unittest.TestCase):
         actual = pl.arr
         expect = np.asarray([[3, 1, 0], [3, 3, 0], ])
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
+
 

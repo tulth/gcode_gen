@@ -52,8 +52,10 @@ class Tree(base_types.Named):
 
     def root_walk(self,):
         yield PreOrderVisit(self)
-        yield MoveUp()
-        yield 0
+        if self.parent is not None:
+            yield MoveUp()
+            for walk_step in self.parent.root_walk():
+                yield walk_step
         yield PostOrderVisit(self)
 
 

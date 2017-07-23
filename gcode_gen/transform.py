@@ -83,6 +83,12 @@ class TransformList(list):
         result = result[:-1].T
         return result
 
+    def __str__(self):
+        results = []
+        for transform in self:
+            results.append(str(transform))
+        return '\n'.join(results) + '\n'
+
 
 class TransformableMixin(object):
     def __init__(self, *args, **kwargs):

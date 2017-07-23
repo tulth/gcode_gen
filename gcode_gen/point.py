@@ -3,10 +3,7 @@ A basic base class for point and point lists
 '''
 import numpy as np
 from collections.abc import MutableSequence, Iterable
-
-
-class PointException(Exception):
-    pass
+from . import number
 
 
 class XYZ(object):
@@ -120,3 +117,14 @@ class PointList(MutableSequence):
         if isinstance(index, slice):
             raise KeyError('slice assignment not supported')
         self._arr = np.insert(self._arr, index, value.arr.reshape(1, 3), axis=0)
+
+
+PL_ZERO = PointList(Point())
+
+
+def changes(point0, point1):
+    result = {}
+    for key, elem0, elem1 in zip(('x', 'y', 'z'), point0.arr, point1.arr):
+        if not number.isclose(elem0, elem1):
+            result[key] = elem1
+    return result

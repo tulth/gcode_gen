@@ -7,6 +7,7 @@ class ArgsUsedError(ValueError):
 
 class InitKwargsOnly(object):
     def __init__(self, *args, **kwargs):
+        super().__init__()
         if args:
             raise ArgsUsedError('only keyword arguments during __init__ are supported, not positional args!')
         self.kwinit(**kwargs)
