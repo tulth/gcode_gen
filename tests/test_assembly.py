@@ -99,7 +99,48 @@ G1 Z0.00000
 '''
         self.assertEqual(actual, expected)
         #
+        print("X2 root.state", root.state)
         gcl = root.get_gcode()
         actual = '\n'.join(map(str, gcl)) + '\n'
         self.assertEqual(actual, expected)
+
+
+class TestMill(unittest.TestCase):
+    def test_get_gcode(self):
+        tool = Carbide3D_101()
+        state = CncState(tool=tool, z_safe=40, feed_rate=150, milling_feed_rate=50)
+        root = assembly.Assembly(name='root', state=state)
+        root += assembly.Mill(x=17, y=19).translate(7, 11)
+        gcl = root.get_gcode()
+        actual = '\n'.join(map(str, gcl)) + '\n'
+        expected = '''G0 Z40.00000
+G0 X7.00000 Y11.00000
+G0 Z0.50000
+F 50.00000
+G1 Z0.00000
+G1 X24.00000 Y30.00000
+'''
+        self.assertEqual(actual, expected)
+
+    def test_get_gcode_x2(self):
+        tool = Carbide3D_101()
+        state = CncState(tool=tool, z_safe=40, feed_rate=150, milling_feed_rate=50)
+        root = assembly.Assembly(name='root', state=state)
+        root += assembly.Mill(x=17, y=19).translate(7, 11)
+        #
+        gcl = root.get_gcode()
+        actual = '\n'.join(map(str, gcl)) + '\n'
+        expected = '''G0 Z40.00000
+G0 X7.00000 Y11.00000
+G0 Z0.50000
+F 50.00000
+G1 Z0.00000
+G1 X24.00000 Y30.00000
+'''
+        self.assertEqual(actual, expected)
+        #
+        gcl = root.get_gcode()
+        actual = '\n'.join(map(str, gcl)) + '\n'
+        self.assertEqual(actual, expected)
+
 

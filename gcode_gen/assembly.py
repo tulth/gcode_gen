@@ -5,7 +5,7 @@ from . import tree
 from . import transform
 from .state import CncState
 from . import point as pt
-from .action import ActionList, Jog, Cut, SetDrillFeedRate
+from . import action
 
 
 class Assembly(tree.Tree):
@@ -15,7 +15,7 @@ class Assembly(tree.Tree):
         self.state = state
         if state is not None:
             if not isinstance(state, CncState):
-                raise TypeError('state must be of type cncstate')
+                raise TypeError('state must be of type CncState')
 
     @property
     def pos(self):
@@ -64,16 +64,16 @@ class Assembly(tree.Tree):
 
     def get_action_list(self):
         with self.state.excursion():
-            ml = ActionList()
+            al = action.ActionList()
             skipped_self = False
             for step in self.depth_first_walk():
                 if step.is_visit and step.is_preorder:
                     if skipped_self:
                         if isinstance(step.visited, TransformableAssemblyLeaf):
-                            ml.extend(step.visited.get_action_list())
+                            al.extend(step.visited.get_action_list())
                     else:
                         skipped_self = True
-        return ml
+        return al
 
 
 class TransformableAssembly(Assembly, transform.TransformableMixin):
@@ -90,14 +90,14 @@ class SafeJog(TransformableAssemblyLeaf):
         super().kwinit(name=name, parent=parent, state=state)
 
     def get_action_list(self):
-        ml = ActionList()
+        al = action.ActionList()
         points = pt.PointList(((0, 0, self.state['z_margin']), ))
         point = pt.PointList(self.root_transforms(points.arr))[0]
-        jog = partial(Jog, state=self.state)
-        ml += jog(x=self.pos.x, y=self.pos.y, z=self.state['z_safe'])
-        ml += jog(x=point.x, y=point.y, z=self.pos.z)
-        ml += jog(x=point.x, y=point.y, z=point.z)
-        return ml
+        jog = partial(action.Jog, state=self.state)
+        al += jog(x=self.pos.x, y=self.pos.y, z=self.state['z_safe'])
+        al += jog(x=point.x, y=point.y, z=self.pos.z)
+        al += jog(x=point.x, y=point.y, z=point.z)
+        return al
 
 
 class UnsafeDrill(TransformableAssemblyLeaf):
@@ -106,24 +106,53 @@ class UnsafeDrill(TransformableAssemblyLeaf):
         self.depth = depth
 
     def get_action_list(self):
-        ml = ActionList()
-        ml += SetDrillFeedRate(self.state)
+        al = action.ActionList()
+        al += action.SetDrillFeedRate(self.state)
         points = pt.PointList()
         points.append(pt.Point(0, 0, -self.depth))
         points.append(pt.Point(0, 0, 0))
         points = pt.PointList(self.root_transforms(points.arr))
-        cut = partial(Cut, state=self.state)
-        ml += cut(*(points[0].arr))
-        ml += cut(*(points[1].arr))
-        return ml
+        cut = partial(action.Cut, state=self.state)
+        al += cut(*(points[0].arr))
+        al += cut(*(points[1].arr))
+        return al
 
 
 class Drill(TransformableAssembly):
     '''drills a hole from z=0 to z=depth
-    use .translate() to set the final x/y/z location of the drill action.
+    use .translate() to set the start x/y/z location of the drill action.
     '''
     def kwinit(self, depth, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
         self += SafeJog()
         self += UnsafeDrill(depth=depth)
+
+
+class UnsafeMill(TransformableAssemblyLeaf):
+    def kwinit(self, x=0, y=0, z=0, name=None, parent=None, state=None):
+        super().kwinit(name=name, parent=parent, state=state)
+        self.dest = pt.Point(x, y, z)
+
+    def get_action_list(self):
+        al = action.ActionList()
+        al += action.SetMillFeedRate(self.state)
+        points = pt.PointList()
+        points.append(pt.Point(0, 0, 0))
+        points.append(self.dest)
+        points = pt.PointList(self.root_transforms(points.arr))
+        cut = partial(action.Cut, state=self.state)
+        al += cut(*(points[0].arr))
+        al += cut(*(points[1].arr))
+        return al
+
+
+class Mill(TransformableAssembly):
+    '''mills a hole from (0, 0, 0) offset to (x, y, z)
+    use .translate() to set the start x/y/z location of the mill action.
+    '''
+    def kwinit(self, x=0, y=0, z=0, name=None, parent=None, state=None):
+        super().kwinit(name=name, parent=parent, state=state)
+        self += SafeJog()
+        self += UnsafeMill()  # move to start point
+        self += UnsafeMill(x=x, y=y, z=z)
 

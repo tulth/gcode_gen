@@ -69,13 +69,29 @@ class Cut(GcodeMotionXYZ):
 class SetDrillFeedRate(Action):
     def __init__(self, state=None):
         super().__init__(state=state)
+        fr = self.state['drilling_feed_rate']
+        if self.state['feed_rate'] != fr:
+            self.state['feed_rate'] = fr
+            self.gc = (gc.SetFeedRate(fr), )
+        else:
+            self.gc = ()
 
     def get_gcode(self):
-        dfr = self.state['drilling_feed_rate']
-        if self.state['feed_rate'] != dfr:
-            return (gc.SetFeedRate(dfr), )
+        return self.gc
+
+
+class SetMillFeedRate(Action):
+    def __init__(self, state=None):
+        super().__init__(state=state)
+        fr = self.state['milling_feed_rate']
+        if self.state['feed_rate'] != fr:
+            self.state['feed_rate'] = fr
+            self.gc = (gc.SetFeedRate(fr), )
         else:
-            return ()
+            self.gc = ()
+
+    def get_gcode(self):
+        return self.gc
 
 
 class ActionList(UserList):
