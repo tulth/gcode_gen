@@ -35,7 +35,7 @@ class State(dict):
         self.update(stored_state)
 
     @contextmanager
-    def excursion(self, ):
+    def excursion(self, nosave=()):
         '''Save state and restore after exiting context block
         for example:
         >>> state = State(feed_rate=40)
@@ -48,9 +48,15 @@ class State(dict):
         >>> print(state['feed_rate'])
         40
         '''
-        stored_state = [(key, self[key]) for key in self.keys()]
+        assert isinstance(nosave, tuple), isinstance(nosave, list)
+        stored_state = []
+        for key in self.keys():
+            if key not in nosave:
+                stored_state.append((key, self[key]))
         yield
+        nosave_key_vals = [(key, self[key]) for key in nosave]
         self.clear()
+        self.update(nosave_key_vals)
         self.update(stored_state)
 
 

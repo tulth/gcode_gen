@@ -1,12 +1,11 @@
 from functools import partial
-from collections import UserList
 from collections.abc import MutableSequence
 from . import base_types
 from . import tree
 from . import transform
 from .state import CncState
-from . import gcode as gc
 from . import point as pt
+from .action import ActionList, Jog, Cut, SetDrillFeedRate
 
 
 class MotionTree(tree.Tree):
@@ -49,7 +48,7 @@ class MotionTree(tree.Tree):
         return self.children[-1]
 
     def get_gcode(self):
-        return self.get_motion_list().get_gcode()
+        return self.get_action_list().get_gcode()
 
     @property
     def root_transforms(self):
@@ -62,16 +61,17 @@ class MotionTree(tree.Tree):
                     result[0:0] = walk_step.visited.transforms
         return result
 
-    def get_motion_list(self):
-        ml = MotionList()
-        skipped_self = False
-        for step in self.depth_first_walk():
-            if step.is_visit and step.is_preorder:
-                if skipped_self:
-                    if isinstance(step.visited, TransformableMotionTreeLeaf):
-                        ml.extend(step.visited.get_motion_list())
-                else:
-                    skipped_self = True
+    def get_action_list(self):
+        with self.state.excursion():
+            ml = ActionList()
+            skipped_self = False
+            for step in self.depth_first_walk():
+                if step.is_visit and step.is_preorder:
+                    if skipped_self:
+                        if isinstance(step.visited, TransformableMotionTreeLeaf):
+                            ml.extend(step.visited.get_action_list())
+                    else:
+                        skipped_self = True
         return ml
 
 
@@ -84,95 +84,12 @@ class TransformableMotionTreeLeaf(TransformableMotionTree):
         raise NotImplementedError('append is not valid for motion tree leaf')
 
 
-class MotionPrimitive(object):
-    '''Represents a single CNC position or state update
-    Note: all motions are transformable'''
-    def __init__(self, state=None):
-        super().__init__()
-        self.state = state
-
-    @property
-    def pos(self):
-        return self.state['position']
-
-    @pos.setter
-    def pos(self, arg):
-        self.state['position'] = arg
-
-    def pos_mv(self, x=None, y=None, z=None):
-        xyz = []
-        for new_val, old_val in zip((x, y, z), self.pos.arr):
-            val = old_val
-            if new_val is not None:
-                val = new_val
-            xyz.append(val)
-        self.pos = pt.Point(*xyz)
-
-    def get_gcode(self):
-        raise NotImplementedError('define gcode generation in base class')
-
-    def get_points(self):
-        raise NotImplementedError('define gcode generation in base class')
-
-
-class GcodeMotionXYZ(MotionPrimitive):
-    def __init__(self, gcode_class, x=None, y=None, z=None, state=None):
-        super().__init__(state=state)
-        old_pos = self.pos
-        self.pos_mv(x, y, z)
-        self.changes = pt.changes(old_pos, self.pos)
-        self.gcode_class = gcode_class
-
-    def get_gcode(self):
-        if self.changes:
-            return self.gcode_class(**self.changes)
-        else:
-            return None
-
-
-class Jog(GcodeMotionXYZ):
-    def __init__(self, x=None, y=None, z=None, state=None):
-        super().__init__(gcode_class=gc.G0,
-                         x=x, y=y, z=z,
-                         state=state)
-
-
-class Cut(GcodeMotionXYZ):
-    def __init__(self, x=None, y=None, z=None, state=None):
-        super().__init__(gcode_class=gc.G1,
-                         x=x, y=y, z=z,
-                         state=state)
-
-
-class MotionList(UserList):
-    def append(self, arg):
-        self.check_type(arg)
-        super().append(arg)
-
-    def extend(self, arg):
-        for elem in arg:
-            self.check_type(elem)
-        super().extend(arg)
-
-    def check_type(self, other):
-        if not isinstance(other, MotionPrimitive):
-            raise TypeError('expected MotionPrimitive type')
-
-    def __iadd__(self, other):
-        'CAUTION: non-list-standard += behavior'
-        self.append(other)
-        return self
-
-    def get_gcode(self):
-        return [elem.get_gcode() for elem in self]
-
-
 class SafeJog(TransformableMotionTreeLeaf):
     def kwinit(self, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
 
-    def get_motion_list(self):
-        ml = MotionList()
+    def get_action_list(self):
+        ml = ActionList()
         points = pt.PointList(((0, 0, self.state['z_margin']), ))
         point = pt.PointList(self.root_transforms(points.arr))[0]
         jog = partial(Jog, state=self.state)
@@ -187,8 +104,9 @@ class UnsafeDrill(TransformableMotionTreeLeaf):
         super().kwinit(name=name, parent=parent, state=state)
         self.depth = depth
 
-    def get_motion_list(self):
-        ml = MotionList()
+    def get_action_list(self):
+        ml = ActionList()
+        ml += SetDrillFeedRate(self.state)
         points = pt.PointList()
         points.append(pt.Point(0, 0, -self.depth))
         points.append(pt.Point(0, 0, 0))
@@ -207,72 +125,4 @@ class Drill(TransformableMotionTree):
         super().kwinit(name=name, parent=parent, state=state)
         self += SafeJog()
         self += UnsafeDrill(depth=depth)
-
-#     def get_motion_list(self):
-#         motion_list = MotionList()
-#         motion_list +=
-#     def __init__(self,
-#                  depth,
-#                  name="DrillHole",
-#                  # plungeRate=None, zMargin=None,
-#                  ):
-#         # if plungeRate is None:
-#         #     plungeRate = self.cncCfg["defaultDrillingFeedRate"]
-#         # if zMargin is None:
-#         #     zMargin = self.cncCfg["zMargin"]
-#         self += SafeJog()
-#         self += Drill(z=-depth)
-#         # vert = np.asarray(((0,0,zMargin), (0,0,-depth), ), dtype=float)
-#         # self.vertices = self.transforms.doTransform(vert)
-#         # self += cmd.G0(z=self.cncCfg["zSafe"])
-#         # self += cmd.G0(*self.vertices[0][:2])
-#         # self += cmd.G0(z=self.vertices[0][2])
-#         # originalFeedRate = self.cncCfg["lastFeedRate"]
-#         # self += cmd.SetFeedRate(plungeRate)
-#         # self += cmd.G1(z=self.vertices[1][2])
-#         # self += cmd.G1(z=self.vertices[0][2])
-#         # if originalFeedRate is not None and originalFeedRate > 0:
-#         #     self += cmd.SetFeedRate(originalFeedRate)
-#         # self += cmd.G0(z=self.cncCfg["zSafe"])
-
-# class BaseMotion(TransformableMixin):
-#     def __init__(self, x=None, y=None, z=None):
-#         super().__init__()
-#         self.gc_pnt = GcodeCoordXYZ(x, y, z)
-
-
-# class Mill(BaseMotion):
-#     def get_gcode(self):
-#         return (SetFeedRate(self.get_prop('mill feed rate')),
-#                 G1(*self.gc_pnt),
-#                 )
-
-#     def get_points(self):
-#         return (Point(self.gc_pnt), )
-
-
-# class Drill(BaseMotion):
-#     def get_gcode(self):
-#         return (SetFeedRate(self.get_prop('drill feed rate')),
-#                 G1(*self.gc_pnt),
-#                 )
-
-#     def get_points(self):
-#         return (Point(self.gc_pnt), )
-
-
-# class SafeJog(BaseMotion):
-#     def get_gcode(self):
-#         return (G0(z=self.get_prop('safe z')),
-#                 G0(x=self.gc_pnt.x, y=self.gc_pnt.y)),
-#                 G0(z=self.get_prop('jog z margin')),
-#                 )
-
-#     def get_points(self):
-#         return (Point(self.get_points('safe z')),
-#                 Point(x=self.gc_pnt.x, y=self.gc_pnt.y),
-#                 Point(self.get_prop('jog z margin')),
-#                 )
-
-
 

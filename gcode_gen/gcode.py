@@ -74,7 +74,7 @@ class SetFeedRate(BaseGcode):
     '''set feed rate.  CAUTION: feed rate is system units per minute'''
     def __init__(self, feedRate):
         self.feedRate = feedRate
-        super().__init__('F {}'.format(feedRate))
+        super().__init__('F {}'.format(num2str(feedRate)))
 
 
 class ActivateSpindleCW(BaseGcode):

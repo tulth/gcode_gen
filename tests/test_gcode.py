@@ -23,7 +23,7 @@ class TestGcode(unittest.TestCase):
         self.assertEqual(str(gcode.SetSpindleSpeed(9000)), "S 9000")
 
     def test_SetFeedRate(self):
-        self.assertEqual(str(gcode.SetFeedRate(15)), "F 15")
+        self.assertEqual(str(gcode.SetFeedRate(15)), "F 15.00000")
 
     def test_ActivateSpindleCW(self):
         self.assertEqual(str(gcode.ActivateSpindleCW()), "M3")

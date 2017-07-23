@@ -37,6 +37,18 @@ class TestState(unittest.TestCase):
         self.assertEqual(state['feed_rate'], 40)
         self.assertEqual(state['z_safe'], 45)
 
+    def test_excursion_nosave(self):
+        state = State(z_safe=45, feed_rate=40)
+        self.assertEqual(state['feed_rate'], 40)
+        self.assertEqual(state['z_safe'], 45)
+        with state.excursion(nosave=('z_safe', )):
+            state['z_safe'] = -12
+            state['feed_rate'] = 100
+            self.assertEqual(state['feed_rate'], 100)
+            self.assertEqual(state['z_safe'], -12)
+        self.assertEqual(state['feed_rate'], 40)
+        self.assertEqual(state['z_safe'], -12)
+
 
 class TestCncState(unittest.TestCase):
 
