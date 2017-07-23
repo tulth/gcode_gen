@@ -1,36 +1,21 @@
+from functools import partial
+from collections.abc import MutableSequence
+from . import base_types
+from . import tree
 from . import transform
-from .point import Point
-from .state import State
-from . import gcode as cmd
+from .state import CncState
+from . import point as pt
+from .action import ActionList, Jog, Cut, SetDrillFeedRate
 
 
-class _BaseAssembly(transform.TransformableMixin):
-    '''Private'''
-    def __init__(self, name=None):
-        super().__init__()
-        self.parent = None  # assigned when added as a child
-        self.state = None  # assigned at root and root assigns to children when they are added
-        self.name = name
-        if self.name is None:
-            self.name = self.default_name
-
-    def get_gcode(self):
-        raise NotImplementedError()
-
-    def get_points(self):
-        raise NotImplementedError()
-
-    @property
-    def default_name(self):
-        return repr(self)
-
-    @property
-    def root_transforms(self):
-        '''get all assembly transforms stacked all the way to the root'''
-        if parent is None:
-            return self.transforms
-        else:
-            return self.parent.root_transforms + self.transforms
+class Assembly(tree.Tree):
+    '''tree of assembly items'''
+    def kwinit(self, name=None, parent=None, state=None):
+        super().kwinit(name, parent)
+        self.state = state
+        if state is not None:
+            if not isinstance(state, CncState):
+                raise TypeError('state must be of type cncstate')
 
     @property
     def pos(self):
@@ -49,127 +34,96 @@ class _BaseAssembly(transform.TransformableMixin):
             xyz.append(val)
         self.pos = Point(*xyz)
 
-    @property
-    def label(self):
-        return '{}:{}'.format(self.__class__.__name__, self.name)
+    def check_type(self, other):
+        assert isinstance(other, Assembly)
 
-
-class AssemblyBranch(_BaseAssembly):
-    def __init__(self, name=None):
-        self.children = []
-        super().__init__(name)
-
-    def get_gcode(self):
-        result = []
-        result.extend(self._get_gcode_prefix())
-        for child in self.children:
-            result.extend(child.get_gcode())
-        result.extend(self._get_gcode_suffix())
-        return result
-
-    def get_points(self):
-        result = []
-        result.extend(self._get_points_prefix())
-        for child in self.children:
-            result.extend(child.get_points())
-        result.extend(self._get_points_suffix())
-        return result
-
-    def _get_gcode_prefix(self):
-        return []  # define in subclass
-
-    def _get_gcode_suffix(self):
-        return []  # define in subclass
-
-    def _get_points_prefix(self):
-        return []  # define in subclass
-
-    def _get_points_suffix(self):
-        return []  # define in subclass
+    def append(self, arg):
+        super().append(arg)
+        # arg.state = self.state
+        for walk_step in arg.depth_first_walk():
+            if walk_step.is_visit and walk_step.is_preorder:
+                node = walk_step.visited
+                node.state = self.state
 
     def last(self):
         return self.children[-1]
 
-    def append(self, arg):
-        self.check_type(arg)
-        self.children.append(arg)
-        arg.parent = self
-        arg.state = self.state
+    def get_gcode(self):
+        return self.get_action_list().get_gcode()
 
-    def check_type(self, other):
-        assert isinstance(other, _BaseAssembly)
+    @property
+    def root_transforms(self):
+        '''get transforms stacked all the way to the root'''
+        result = transform.TransformList()
+        for walk_step in self.root_walk():
+            if walk_step.is_visit and walk_step.is_preorder:
+                if isinstance(walk_step.visited, TransformableAssembly):
+                    # extend left
+                    result[0:0] = walk_step.visited.transforms
+        return result
 
-    def __iadd__(self, other):
-        self.append(other)
-        return self
-
-    def __str__(self):
-        return '\n'.join(self.tree_str())
-
-    def tree_str(self, indent=0):
-        str_list = ['{}{}'.format(indent * ' ', self.label)]
-        for child in self.children:
-            if isinstance(child, Assembly):
-                str_list.append(child.tree_str(indent + 2))
-            else:
-                str_list.append('{}{}'.format((indent + 2) * ' ', child))
-        return str_list
+    def get_action_list(self):
+        with self.state.excursion():
+            ml = ActionList()
+            skipped_self = False
+            for step in self.depth_first_walk():
+                if step.is_visit and step.is_preorder:
+                    if skipped_self:
+                        if isinstance(step.visited, TransformableAssemblyLeaf):
+                            ml.extend(step.visited.get_action_list())
+                    else:
+                        skipped_self = True
+        return ml
 
 
-class Assembly(AssemblyBranch):
+class TransformableAssembly(Assembly, transform.TransformableMixin):
     pass
 
 
-class AssemblyRoot(AssemblyBranch):
-    def __init__(self, name=None, state=None):
-        super().__init__(name=name)
-        if not isinstance(state, State):
-            raise TypeError('state argument must by of type State')
-        self.state = state
+class TransformableAssemblyLeaf(TransformableAssembly):
+    def append(self, arg):
+        raise NotImplementedError('append is not valid for assembly tree leaf')
 
 
-class AssemblyLeaf(_BaseAssembly):
-    def __str__(self):
-        return self.label
+class SafeJog(TransformableAssemblyLeaf):
+    def kwinit(self, name=None, parent=None, state=None):
+        super().kwinit(name=name, parent=parent, state=state)
 
-    def tree_str(self, indent=0):
-        return ['{}{}'.format(indent * ' ', self.label)]
-
-    def get_points(self):
-        return [self.pos]
-
-
-class FileHeaderAsm(AssemblyLeaf):
-    def get_gcode(self):
-        gc = [cmd.Home(),
-              cmd.UnitsMillimeters(),
-              cmd.MotionAbsolute(),
-              cmd.SetSpindleSpeed(self.state['spindle_speed']),
-              cmd.ActivateSpindleCW(),
-              cmd.SetFeedRate(self.state['feed_rate']),
-              ]
-        return gc
+    def get_action_list(self):
+        ml = ActionList()
+        points = pt.PointList(((0, 0, self.state['z_margin']), ))
+        point = pt.PointList(self.root_transforms(points.arr))[0]
+        jog = partial(Jog, state=self.state)
+        ml += jog(x=self.pos.x, y=self.pos.y, z=self.state['z_safe'])
+        ml += jog(x=point.x, y=point.y, z=self.pos.z)
+        ml += jog(x=point.x, y=point.y, z=point.z)
+        return ml
 
 
-class FileFooterAsm(AssemblyLeaf):
-    def get_gcode(self):
-        gc = [cmd.G0(self.pos.x, self.pos.y, z=self.state['z_safe']),
-              cmd.StopSpindle(),
-              # cmd.Home(),
-              ]
-        return gc
+class UnsafeDrill(TransformableAssemblyLeaf):
+    def kwinit(self, depth, name=None, parent=None, state=None):
+        super().kwinit(name=name, parent=parent, state=state)
+        self.depth = depth
 
-    def get_points(self):
-        self.pos_mv(z=self.state['z_safe'])
-        return super().get_points()
+    def get_action_list(self):
+        ml = ActionList()
+        ml += SetDrillFeedRate(self.state)
+        points = pt.PointList()
+        points.append(pt.Point(0, 0, -self.depth))
+        points.append(pt.Point(0, 0, 0))
+        points = pt.PointList(self.root_transforms(points.arr))
+        cut = partial(Cut, state=self.state)
+        ml += cut(*(points[0].arr))
+        ml += cut(*(points[1].arr))
+        return ml
 
 
-class FileAsm(AssemblyRoot):
-    def __init__(self, state, name=None, comments=()):
-        super().__init__(name=name, state=state, )
-        self.comments = comments
-        self += FileHeaderAsm()
-
-    def _get_gcode_prefix(self):
-        return [cmd.Comment(comment) for comment in self.comments]
+class Drill(TransformableAssembly):
+    '''drills a hole from z=0 to z=depth
+    use .translate() to set the final x/y/z location of the drill action.
+    '''
+    def kwinit(self, depth, name=None, parent=None, state=None):
+        super().kwinit(name=name, parent=parent, state=state)
+        self += SafeJog()
+        self += UnsafeDrill(depth=depth)
 

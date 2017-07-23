@@ -16,8 +16,7 @@ from .test_poly import *
 from .test_gcode import *
 from .test_state import *
 # assembly level
-from .test_motion import *
-# from .test_assembly import *
+from .test_assembly import *
 
 if __name__ == '__main__':
     unittest.main()
