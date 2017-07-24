@@ -17,17 +17,6 @@ class Assembly(tree.Tree):
             if not isinstance(state, CncState):
                 raise TypeError('state must be of type CncState')
 
-    @property
-    def pos(self):
-        return self.state['position']
-
-    @pos.setter
-    def pos(self, arg):
-        self.state['position'] = arg
-
-    def pos_offset(self, x=None, y=None, z=None):
-        self.pos = self.pos.offset(x, y, z)
-
     def check_type(self, other):
         assert isinstance(other, Assembly)
 
@@ -48,17 +37,6 @@ class Assembly(tree.Tree):
     def get_points(self):
         return self.get_actions().get_points()
 
-    @property
-    def root_transforms(self):
-        '''get transforms stacked all the way to the root'''
-        result = transform.TransformList()
-        for walk_step in self.root_walk():
-            if walk_step.is_visit and walk_step.is_preorder:
-                if isinstance(walk_step.visited, TransformableAssembly):
-                    # extend left
-                    result[0:0] = walk_step.visited.transforms
-        return result
-
     def get_actions(self):
         with self.state.excursion():
             al = action.ActionList()
@@ -74,7 +52,27 @@ class Assembly(tree.Tree):
 
 
 class TransformableAssembly(Assembly, transform.TransformableMixin):
-    pass
+    @property
+    def pos(self):
+        return self.state['position']
+
+    @pos.setter
+    def pos(self, arg):
+        self.state['position'] = arg
+
+    def pos_offset(self, x=None, y=None, z=None):
+        self.pos = self.pos.offset(x, y, z)
+
+    @property
+    def root_transforms(self):
+        '''get transforms stacked all the way to the root'''
+        result = transform.TransformList()
+        for walk_step in self.root_walk():
+            if walk_step.is_visit and walk_step.is_preorder:
+                if isinstance(walk_step.visited, TransformableAssembly):
+                    # extend left
+                    result[0:0] = walk_step.visited.transforms
+        return result
 
 
 class TransformableAssemblyLeaf(TransformableAssembly):
