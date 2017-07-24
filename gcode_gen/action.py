@@ -1,112 +1,109 @@
 '''Library for 'Actions' representing cnc position or state updates and lists of actions'''
 from collections import UserList
+from . import number
 from . import gcode as gc
 from . import point as pt
 
 
 class Action(object):
-    '''Represents a single CNC position or state update'''
+    '''Represents a single CNC position or state update
+    CAUTION: Only update state during __init__
+    CAUTION: Do not update state during get_gcode or get_point!
+    '''
     def __init__(self, state=None):
         super().__init__()
         self.state = state
-
-    @property
-    def pos(self):
-        return self.state['position']
-
-    @pos.setter
-    def pos(self, arg):
-        self.state['position'] = arg
-
-    def pos_mv(self, x=None, y=None, z=None):
-        xyz = []
-        for new_val, old_val in zip((x, y, z), self.pos.arr):
-            val = old_val
-            if new_val is not None:
-                val = new_val
-            xyz.append(val)
-        self.pos = pt.Point(*xyz)
+        # default point, override in subclass
+        self.point = self.state['position']
+        self.skip = False
 
     def get_gcode(self):
         raise NotImplementedError('define gcode generation in base class')
 
-    def get_points(self):
-        raise NotImplementedError('define gcode generation in base class')
+    def get_point(self):
+        return (self.point, )
 
     def __iter__(self):
         yield self
 
-
-class GcodeMotionXYZ(Action):
-    def __init__(self, gcode_class, x=None, y=None, z=None, state=None):
-        super().__init__(state=state)
-        old_pos = self.pos
-        self.pos_mv(x, y, z)
-        self.changes = pt.changes(old_pos, self.pos)
-        self.gcode_class = gcode_class
-
-    def get_gcode(self):
-        if self.changes:
-            return (self.gcode_class(**self.changes), )
-        else:
-            return ()
+    def __str__(self):
+        return "{} {}".format(self.__class__.__name__, self.point)
 
 
-class Jog(GcodeMotionXYZ):
+class Motion(Action):
+    '''x, y, and z are new ABSOLUTE points when not None'''
     def __init__(self, x=None, y=None, z=None, state=None):
-        super().__init__(gcode_class=gc.G0,
-                         x=x, y=y, z=z,
+        super().__init__(state=state)
+        last_point = self.point
+        self.point = pt.Point(x, y, z)
+        state['position'] = self.point
+        self.changes = pt.changes(last_point, self.point)
+        if not self.changes:
+            self.skip = True
+
+
+class Jog(Motion):
+    def get_gcode(self):
+        return (gc.G0(**self.changes), )
+
+
+class Cut(Motion):
+    def get_gcode(self):
+        return (gc.G1(**self.changes), )
+
+
+class StateChange(Action):
+    def get_gcode(self):
+        return self.gc_tuple
+
+    def get_point(self):
+        return ()
+
+
+class SetFeedRate(StateChange):
+    def __init__(self, feed_rate, state=None):
+        super().__init__(state=state)
+        self.feed_rate = feed_rate
+        if self.state['feed_rate'] != self.feed_rate:
+            self.state['feed_rate'] = self.feed_rate
+            self.gc_tuple = (gc.SetFeedRate(self.feed_rate), )
+        else:
+            self.skip = True
+            self.gc_tuple = ()
+
+    def __str__(self):
+        return "{} {} {}".format(self.__class__.__name__, self.point, number.num2str(self.feed_rate))
+
+
+class SetDrillFeedRate(SetFeedRate):
+    def __init__(self, state=None):
+        super().__init__(feed_rate=state['drilling_feed_rate'],
                          state=state)
 
 
-class Cut(GcodeMotionXYZ):
-    def __init__(self, x=None, y=None, z=None, state=None):
-        super().__init__(gcode_class=gc.G1,
-                         x=x, y=y, z=z,
+class SetMillFeedRate(SetFeedRate):
+    def __init__(self, state=None):
+        super().__init__(feed_rate=state['milling_feed_rate'],
                          state=state)
-
-
-class SetDrillFeedRate(Action):
-    def __init__(self, state=None):
-        super().__init__(state=state)
-        fr = self.state['drilling_feed_rate']
-        if self.state['feed_rate'] != fr:
-            self.state['feed_rate'] = fr
-            self.gc = (gc.SetFeedRate(fr), )
-        else:
-            self.gc = ()
-
-    def get_gcode(self):
-        return self.gc
-
-
-class SetMillFeedRate(Action):
-    def __init__(self, state=None):
-        super().__init__(state=state)
-        fr = self.state['milling_feed_rate']
-        if self.state['feed_rate'] != fr:
-            self.state['feed_rate'] = fr
-            self.gc = (gc.SetFeedRate(fr), )
-        else:
-            self.gc = ()
-
-    def get_gcode(self):
-        return self.gc
 
 
 class ActionList(UserList):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.drop_skip = True
+
     def append(self, arg):
         self.check_type(arg)
-        super().append(arg)
+        if not arg.skip and self.drop_skip:
+            super().append(arg)
 
     def extend(self, arg):
         for elem in arg:
-            self.check_type(elem)
-        super().extend(arg)
+            self.append(elem)
 
     def check_type(self, other):
         if not isinstance(other, Action):
-            raise TypeError('expected Action type')
+            raise TypeError('expected Action type, got {}'.format(type(other)))
 
     def get_gcode(self):
         result = []
@@ -114,4 +111,13 @@ class ActionList(UserList):
             result.extend(elem.get_gcode())
         return result
 
+    def get_points(self):
+        pl = pt.PointList()
+        for elem in self:
+            new_pt_tuple = elem.get_point()
+            if len(new_pt_tuple) == 1:
+                pl.append(new_pt_tuple[0])  # compress points that are identical
+            elif len(new_pt_tuple) > 1:
+                raise TypeError('get_point must return either an empty tuple or a tuple containing a single point')
+        return pl
 

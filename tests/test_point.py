@@ -16,6 +16,20 @@ class TestPoint(unittest.TestCase):
         expect = np.asarray((1, 2, 3))
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
+    def test_offset(self):
+        p0 = point.Point(1, 2, 3)
+        self.assertIsInstance(p0, point.Point)
+        actual = p0.offset(5, 7, 9).arr
+        expect = [6, 9, 12]
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
+        #
+        p0 = point.Point(1, z=3)
+        self.assertIsInstance(p0, point.Point)
+        actual = p0.offset(z=7, y=5).arr
+        expect = [1, 5, 10]
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
+        #
+
     def test_point_changes(self):
         p0 = point.Point(1, 2)
         p1 = point.Point(1, 2)

@@ -25,14 +25,8 @@ class Assembly(tree.Tree):
     def pos(self, arg):
         self.state['position'] = arg
 
-    def pos_mv(self, x=None, y=None, z=None):
-        xyz = []
-        for new_val, old_val in zip((x, y, z), self.pos.arr):
-            val = old_val
-            if new_val is not None:
-                val = new_val
-            xyz.append(val)
-        self.pos = Point(*xyz)
+    def pos_offset(self, x=None, y=None, z=None):
+        self.pos = self.pos.offset(x, y, z)
 
     def check_type(self, other):
         assert isinstance(other, Assembly)
@@ -49,7 +43,10 @@ class Assembly(tree.Tree):
         return self.children[-1]
 
     def get_gcode(self):
-        return self.get_action_list().get_gcode()
+        return self.get_actions().get_gcode()
+
+    def get_points(self):
+        return self.get_actions().get_points()
 
     @property
     def root_transforms(self):
@@ -62,7 +59,7 @@ class Assembly(tree.Tree):
                     result[0:0] = walk_step.visited.transforms
         return result
 
-    def get_action_list(self):
+    def get_actions(self):
         with self.state.excursion():
             al = action.ActionList()
             skipped_self = False
@@ -70,7 +67,7 @@ class Assembly(tree.Tree):
                 if step.is_visit and step.is_preorder:
                     if skipped_self:
                         if isinstance(step.visited, TransformableAssemblyLeaf):
-                            al.extend(step.visited.get_action_list())
+                            al.extend(step.visited.get_actions())
                     else:
                         skipped_self = True
         return al
@@ -89,7 +86,7 @@ class SafeJog(TransformableAssemblyLeaf):
     def kwinit(self, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
 
-    def get_action_list(self):
+    def get_actions(self):
         al = action.ActionList()
         points = pt.PointList(((0, 0, self.state['z_margin']), ))
         point = pt.PointList(self.root_transforms(points.arr))[0]
@@ -100,12 +97,25 @@ class SafeJog(TransformableAssemblyLeaf):
         return al
 
 
+class SafeZ(TransformableAssemblyLeaf):
+    def kwinit(self, name=None, parent=None, state=None):
+        super().kwinit(name=name, parent=parent, state=state)
+
+    def get_actions(self):
+        al = action.ActionList()
+        points = pt.PointList(((0, 0, self.state['z_margin']), ))
+        point = pt.PointList(self.root_transforms(points.arr))[0]
+        jog = partial(action.Jog, state=self.state)
+        al += jog(x=self.pos.x, y=self.pos.y, z=self.state['z_safe'])
+        return al
+
+
 class UnsafeDrill(TransformableAssemblyLeaf):
     def kwinit(self, depth, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
         self.depth = depth
 
-    def get_action_list(self):
+    def get_actions(self):
         al = action.ActionList()
         al += action.SetDrillFeedRate(self.state)
         points = pt.PointList()
@@ -133,7 +143,7 @@ class UnsafeMill(TransformableAssemblyLeaf):
         super().kwinit(name=name, parent=parent, state=state)
         self.dest = pt.Point(x, y, z)
 
-    def get_action_list(self):
+    def get_actions(self):
         al = action.ActionList()
         al += action.SetMillFeedRate(self.state)
         points = pt.PointList()

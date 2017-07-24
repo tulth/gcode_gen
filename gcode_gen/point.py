@@ -45,6 +45,20 @@ class Point(XYZ):
     def __copy__(self):
         return Point(*self.xyz.copy())
 
+    def offset(self, x=None, y=None, z=None):
+        '''Returns a new point with the the offset applied'''
+        new_xyz = np.copy(self.xyz)
+        for index, offset in enumerate((x, y, z)):
+            if offset is not None:
+                new_xyz[index] += offset
+        return Point(*new_xyz)
+
+    def __eq__(self, other):
+        return np.allclose(actual, expect)
+
+    def __str__(self):
+        return '({}, {}, {})'.format(*(map(number.num2str, self.xyz)))
+
 
 class PointList(MutableSequence):
     '''A list of 3-d Points.
