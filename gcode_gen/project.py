@@ -1,34 +1,51 @@
-# class FileHeaderAsm(AssemblyLeaf):
-#     def get_gcode(self):
-#         gc = [cmd.Home(),
-#               cmd.UnitsMillimeters(),
-#               cmd.MotionAbsolute(),
-#               cmd.SetSpindleSpeed(self.state['spindle_speed']),
-#               cmd.ActivateSpindleCW(),
-#               cmd.SetFeedRate(self.state['feed_rate']),
-#               ]
-#         return gc
+from .tool import Tool
+from . import state
+from . import action
+from . import assembly
 
 
-# class FileFooterAsm(AssemblyLeaf):
-#     def get_gcode(self):
-#         gc = [cmd.G0(self.pos.x, self.pos.y, z=self.state['z_safe']),
-#               cmd.StopSpindle(),
-#               # cmd.Home(),
-#               ]
-#         return gc
-
-#     def get_points(self):
-#         self.pos_mv(z=self.state['z_safe'])
-#         return super().get_points()
+# class ToolPass(assembly.Assembly):
+#     def kwinit(self, name=None, parent=None, tool=None, state=None):
+#         assert state['tool'] is None
+#         assert isinstance(tool, Tool)
+#         state['tool'] = tool
+#         super().kwinit(name, parent, state)
 
 
-# class FileAsm(AssemblyRoot):
-#     def __init__(self, state, name=None, comments=()):
-#         super().__init__(name=name, state=state, )
-#         self.comments = comments
-#         self += FileHeaderAsm()
+class Header(assembly.TransformableAssemblyLeaf):
+    def get_actions(self):
+        al = action.ActionList()
+        al += action.Home(self.state)
+        al += action.UnitsMillimeters(self.state)
+        al += action.MotionAbsolute(self.state)
+        al += action.SetSpindleSpeed(state.DEFAULT_SPINDLE_SPEED, state=self.state)
+        al += action.ActivateSpindleCW(self.state)
+        al += action.SetFeedRate(self.state['milling_feed_rate'], state=self.state)
+        return al
 
-#     def _get_gcode_prefix(self):
-#         return [cmd.Comment(comment) for comment in self.comments]
 
+class Footer(assembly.TransformableAssembly):
+    def kwinit(self, name=None, parent=None, state=None):
+        super().kwinit(name=name, parent=parent, state=state)
+        self += assembly.SafeJog(state=self.state).translate(z=self.state['z_safe'])
+
+    def has_postorder_actions(self):
+        return True
+
+    def get_postorder_actions(self):
+        al = action.ActionList()
+        al += action.StopSpindle(self.state)
+        return al
+
+
+class ToolPass(assembly.TransformableAssembly):
+    '''one gcode file, typically used one per tool needed for a project'''
+    def kwinit(self, name=None, parent=None, state=None):
+        super().kwinit(name=name, parent=parent, state=state)
+        self += Header(state=self.state).translate(z=self.state['z_safe'])
+
+    def get_actions(self):
+        self += Footer(state=self.state)
+        actions = super().get_actions()
+        self.children = self.children[:-1]
+        return actions

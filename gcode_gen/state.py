@@ -8,6 +8,7 @@ from .tool import Tool
 
 # default homed at x/y=0, but z is indeterminate, estimating 70 mm
 DEFAULT_START = Point(0, 0, 70)
+DEFAULT_SPINDLE_SPEED = 10000
 
 
 class State(dict):
@@ -64,7 +65,7 @@ class CncState(State):
     def __init__(self,
                  tool,
                  z_safe,
-                 spindle_speed=10000,
+                 spindle_speed=None,
                  depth_per_milling_pass=0.4,
                  milling_feed_rate=150,
                  drilling_feed_rate=20,
@@ -82,10 +83,7 @@ class CncState(State):
         self['milling_feed_rate'] = milling_feed_rate
         self['drilling_feed_rate'] = drilling_feed_rate
         self['milling_overlap'] = milling_overlap
-        if feed_rate is None:
-            self['feed_rate'] = self['milling_feed_rate']
-        else:
-            self['feed_rate'] = feed_rate
+        self['feed_rate'] = feed_rate
         self['z_margin'] = z_margin
         if position is None:
             self['position'] = DEFAULT_START

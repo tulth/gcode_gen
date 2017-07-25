@@ -15,8 +15,11 @@ from .test_poly import *
 # gcode / machine
 from .test_gcode import *
 from .test_state import *
-# assembly level
+#
 from .test_assembly import *
+from .test_cut import *
+#
+from .test_project import *
 
 if __name__ == '__main__':
     unittest.main()

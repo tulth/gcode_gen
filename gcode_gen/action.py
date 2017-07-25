@@ -60,16 +60,61 @@ class StateChange(Action):
         return ()
 
 
+class GcodeWithoutArg(StateChange):
+    GC = None  # Define in subclass
+
+    def __init__(self, state=None):
+        super().__init__(state=state)
+        if not isinstance(self.GC(), gc.BaseGcode):
+            raise NotImplementedError('must have GC gcode command class variable defined')
+        self.gc_tuple = (self.GC(), )
+
+
+class Home(GcodeWithoutArg):
+    GC = gc.Home
+
+
+class Comment(GcodeWithoutArg):
+    GC = gc.Comment
+
+
+class UnitsInches(GcodeWithoutArg):
+    GC = gc.UnitsInches
+
+
+class UnitsMillimeters(GcodeWithoutArg):
+    GC = gc.UnitsMillimeters
+
+
+class MotionAbsolute(GcodeWithoutArg):
+    GC = gc.MotionAbsolute
+
+
+class MotionRelative(GcodeWithoutArg):
+    GC = gc.MotionRelative
+
+
+class ActivateSpindleCW(GcodeWithoutArg):
+    GC = gc.ActivateSpindleCW
+
+
+class StopSpindle(GcodeWithoutArg):
+    GC = gc.StopSpindle
+
+
 class SetFeedRate(StateChange):
     def __init__(self, feed_rate, state=None):
         super().__init__(state=state)
         self.feed_rate = feed_rate
-        if self.state['feed_rate'] != self.feed_rate:
+        if self.state['feed_rate'] is None:
+            self.skip = False
+        elif number.isclose(self.state['feed_rate'], self.feed_rate):
+            self.skip = True
+        if self.skip:
+            self.gc_tuple = ()
+        else:
             self.state['feed_rate'] = self.feed_rate
             self.gc_tuple = (gc.SetFeedRate(self.feed_rate), )
-        else:
-            self.skip = True
-            self.gc_tuple = ()
 
     def __str__(self):
         return "{} {} {}".format(self.__class__.__name__, self.point, number.num2str(self.feed_rate))
@@ -85,6 +130,21 @@ class SetMillFeedRate(SetFeedRate):
     def __init__(self, state=None):
         super().__init__(feed_rate=state['milling_feed_rate'],
                          state=state)
+
+
+class SetSpindleSpeed(StateChange):
+    def __init__(self, spindle_speed, state=None):
+        super().__init__(state=state)
+        self.spindle_speed = spindle_speed
+        if self.state['spindle_speed'] != self.spindle_speed:
+            self.state['spindle_speed'] = self.spindle_speed
+            self.gc_tuple = (gc.SetSpindleSpeed(self.spindle_speed), )
+        else:
+            self.skip = True
+            self.gc_tuple = ()
+
+    def __str__(self):
+        return "{} {} {}".format(self.__class__.__name__, self.point, self.spindle_speed)
 
 
 class ActionList(UserList):
@@ -121,3 +181,5 @@ class ActionList(UserList):
                 raise TypeError('get_point must return either an empty tuple or a tuple containing a single point')
         return pl
 
+    def __str__(self):
+        return '\n'.join(map(str, self))
