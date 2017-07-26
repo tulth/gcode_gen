@@ -17,12 +17,6 @@ class Assembly(tree.Tree):
             if not isinstance(state, CncState):
                 raise TypeError('state must be of type CncState')
 
-    def has_preorder_actions(self):
-        return False
-
-    def has_postorder_actions(self):
-        return False
-
     def check_type(self, other):
         assert isinstance(other, Assembly)
 
@@ -43,19 +37,21 @@ class Assembly(tree.Tree):
     def get_points(self):
         return self.get_actions().get_points()
 
+    def get_preorder_actions(self):
+        return ()
+
+    def get_postorder_actions(self):
+        return ()
+
     def get_actions(self):
         with self.state.excursion():
             al = action.ActionList()
-            skipped_self = False
             for step in self.depth_first_walk():
                 if step.is_visit:
-                    if skipped_self:
-                        if step.is_preorder and step.visited.has_preorder_actions():
-                            al.extend(step.visited.get_actions())
-                        elif step.is_postorder and step.visited.has_postorder_actions():
-                            al.extend(step.visited.get_postorder_actions())
-                    else:
-                        skipped_self = True
+                    if step.is_preorder:
+                        al.extend(step.visited.get_preorder_actions())
+                    elif step.is_postorder:
+                        al.extend(step.visited.get_postorder_actions())
         return al
 
 
@@ -87,15 +83,12 @@ class TransformableAssemblyLeaf(TransformableAssembly):
     def append(self, arg):
         raise NotImplementedError('append is not valid for assembly tree leaf')
 
-    def has_preorder_actions(self):
-        return True
-
 
 class SafeJog(TransformableAssemblyLeaf):
     def kwinit(self, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
 
-    def get_actions(self):
+    def get_preorder_actions(self):
         al = action.ActionList()
         points = pt.PointList(((0, 0, self.state['z_margin']), ))
         point = pt.PointList(self.root_transforms(points.arr))[0]
@@ -110,7 +103,7 @@ class SafeZ(TransformableAssemblyLeaf):
     def kwinit(self, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
 
-    def get_actions(self):
+    def get_preorder_actions(self):
         al = action.ActionList()
         points = pt.PointList(((0, 0, self.state['z_margin']), ))
         point = pt.PointList(self.root_transforms(points.arr))[0]

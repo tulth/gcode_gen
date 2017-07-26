@@ -1,4 +1,5 @@
 from functools import partial
+from . import number
 from . import iter_util
 from . import point as pt
 from . import action
@@ -11,7 +12,7 @@ class UnsafeDrill(TransformableAssemblyLeaf):
         super().kwinit(name=name, parent=parent, state=state)
         self.depth = depth
 
-    def get_actions(self):
+    def get_preorder_actions(self):
         al = action.ActionList()
         al += action.SetDrillFeedRate(self.state)
         points = pt.PointList()
@@ -39,7 +40,7 @@ class UnsafeMill(TransformableAssemblyLeaf):
         super().kwinit(name=name, parent=parent, state=state)
         self.dest = pt.Point(x, y, z)
 
-    def get_actions(self):
+    def get_preorder_actions(self):
         al = action.ActionList()
         al += action.SetMillFeedRate(self.state)
         points = pt.PointList()
@@ -78,6 +79,7 @@ class Polygon(TransformableAssembly):
                is_filled,
                name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
+        self.depth = depth
         if cut_style not in CUT_STYLES:
             raise TypeError('cut_style must be in {}; given arg {}'.format(CUT_STYLES, cut_style))
         self.cut_style = cut_style
@@ -87,22 +89,21 @@ class Polygon(TransformableAssembly):
         assert not(self.is_filled)
         self.poly = poly.SimplePolygon(vertices)
 
-    def get_actions(self):
+    def get_preorder_actions(self):
         pre_children_len = len(self.children)
         cut_poly = self.get_cut_poly()
-        self += SafeJog()
+        self += SafeJog().translate(x=cut_poly.arr[0][0], y=cut_poly.arr[0][1])
         #
-        depth_per_pass = self.state['depth_per_pass']
-        z_cut_steps = number.calc_steps_with_max_spacing(0, -depth, depth_per_pass)
+        depth_per_pass = self.state['depth_per_milling_pass']
+        z_cut_steps = number.calc_steps_with_max_spacing(0, -self.depth, depth_per_pass)
         for z_cut_step in z_cut_steps:
-            self += UnsafeMill(z=z_cut_step)  # move to start point
+            self += UnsafeMill(z=z_cut_step).translate(x=cut_poly.arr[0][0], y=cut_poly.arr[0][1])
             for vert in iter_util.all_plus_first_iter(cut_poly.arr):
-                assert number.isclose(vert[3], 0)
+                assert number.isclose(vert[2], 0)
                 self += UnsafeMill(x=vert[0], y=vert[1], )
         #
-        actions = super().get_actions()
-        self.children = self.children[:(pre_children_len - 1)]
-        return actions
+        # FIXME self.children = self.children[:(pre_children_len - 1)]
+        return ()
 
     def get_cut_poly(self):
         tool_dia = self.state['tool'].cut_diameter

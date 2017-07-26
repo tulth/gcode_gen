@@ -158,6 +158,10 @@ class ActionList(UserList):
             super().append(arg)
 
     def extend(self, arg):
+        if arg == []:
+            return
+        if arg == ():
+            return
         for elem in arg:
             self.append(elem)
 

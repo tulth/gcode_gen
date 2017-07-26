@@ -87,7 +87,7 @@ class TestToolPass(unittest.TestCase):
         root += Mill(x=17, y=19).translate(7, 11)
         al = root.get_actions()
         actual = str(al)
-        print(actual)
+        # print(actual)
         expect = '''Home (0.00000, 0.00000, 70.00000)
 UnitsMillimeters (0.00000, 0.00000, 70.00000)
 MotionAbsolute (0.00000, 0.00000, 70.00000)

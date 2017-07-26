@@ -225,7 +225,7 @@ class TestPolygon(unittest.TestCase):
         gcl = root.get_gcode()
         actual = '\n'.join(map(str, gcl)) + '\n'
         print()
-        print(gcl)
+        print(actual)
 #         expected = '''G0 Z40.00000
 # G0 X7.00000 Y11.00000
 # G0 Z0.50000
