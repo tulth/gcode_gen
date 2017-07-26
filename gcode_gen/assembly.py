@@ -8,7 +8,7 @@ from . import point as pt
 from . import action
 
 
-class Assembly(tree.Tree):
+class Assembly(tree.Tree, transform.TransformableMixin):
     '''tree of assembly items'''
     def kwinit(self, name=None, parent=None, state=None):
         super().kwinit(name, parent)
@@ -37,11 +37,17 @@ class Assembly(tree.Tree):
     def get_points(self):
         return self.get_actions().get_points()
 
+    def update_children_preorder(self):
+        pass
+
     def get_preorder_actions(self):
         return ()
 
     def get_postorder_actions(self):
         return ()
+
+    def update_children_postorder(self):
+        pass
 
     def get_actions(self):
         with self.state.excursion():
@@ -49,13 +55,13 @@ class Assembly(tree.Tree):
             for step in self.depth_first_walk():
                 if step.is_visit:
                     if step.is_preorder:
+                        step.visited.update_children_preorder()
                         al.extend(step.visited.get_preorder_actions())
                     elif step.is_postorder:
                         al.extend(step.visited.get_postorder_actions())
+                        step.visited.update_children_postorder()
         return al
 
-
-class TransformableAssembly(Assembly, transform.TransformableMixin):
     @property
     def pos(self):
         return self.state['position']
@@ -73,18 +79,13 @@ class TransformableAssembly(Assembly, transform.TransformableMixin):
         result = transform.TransformList()
         for walk_step in self.root_walk():
             if walk_step.is_visit and walk_step.is_preorder:
-                if isinstance(walk_step.visited, TransformableAssembly):
+                if isinstance(walk_step.visited, Assembly):
                     # extend left
                     result[0:0] = walk_step.visited.transforms
         return result
 
 
-class TransformableAssemblyLeaf(TransformableAssembly):
-    def append(self, arg):
-        raise NotImplementedError('append is not valid for assembly tree leaf')
-
-
-class SafeJog(TransformableAssemblyLeaf):
+class SafeJog(Assembly):
     def kwinit(self, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
 
@@ -99,7 +100,7 @@ class SafeJog(TransformableAssemblyLeaf):
         return al
 
 
-class SafeZ(TransformableAssemblyLeaf):
+class SafeZ(Assembly):
     def kwinit(self, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
 

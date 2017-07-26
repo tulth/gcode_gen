@@ -6,11 +6,11 @@ from gcode_gen.tool import Carbide3D_101
 from gcode_gen.state import CncState, DEFAULT_START
 
 
-class TestTransformableAssembly(unittest.TestCase):
+class TestAssembly(unittest.TestCase):
     def gen_test_tree(self):
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40)
-        TASM = assembly.TransformableAssembly
+        TASM = assembly.Assembly
         root = TASM(name='root', state=state)
         a = TASM(name='a')
         b = TASM(name='b')
@@ -214,7 +214,7 @@ test_square = [[-1, -1, 0], [1, -1, 0], [1, 1, 0], [-1, 1, 0], ]
 class TestPolygon(unittest.TestCase):
     def test_get_gcode(self):
         tool = Carbide3D_101()
-        state = CncState(tool=tool, z_safe=40, feed_rate=150, drilling_feed_rate=20)
+        state = CncState(tool=tool, z_safe=40, feed_rate=None, milling_feed_rate=40)
         root = assembly.Assembly(name='root', state=state)
         root += cut.Polygon(vertices=test_square,
                             depth=1,
@@ -226,12 +226,30 @@ class TestPolygon(unittest.TestCase):
         actual = '\n'.join(map(str, gcl)) + '\n'
         print()
         print(actual)
-#         expected = '''G0 Z40.00000
-# G0 X7.00000 Y11.00000
-# G0 Z0.50000
-# F 20.00000
-# G1 Z-13.00000
-# G1 Z0.00000
-# '''
-#         self.assertEqual(actual, expected)
+        expected = '''G0 Z40.00000
+G0 X6.00000 Y10.00000
+G0 Z0.50000
+F 40.00000
+G1 Z0.00000
+G1 X8.00000
+G1 Y12.00000
+G1 X6.00000
+G1 Y10.00000
+G1 Z-0.33333
+G1 X8.00000
+G1 Y12.00000
+G1 X6.00000
+G1 Y10.00000
+G1 Z-0.66667
+G1 X8.00000
+G1 Y12.00000
+G1 X6.00000
+G1 Y10.00000
+G1 Z-1.00000
+G1 X8.00000
+G1 Y12.00000
+G1 X6.00000
+G1 Y10.00000
+'''
+        self.assertEqual(actual, expected)
 

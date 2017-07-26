@@ -132,3 +132,4 @@ M5'''
         gcl = root.get_gcode()
         actual = '\n'.join(map(str, gcl))
         self.assertEqual(actual, expect)
+

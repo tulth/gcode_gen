@@ -49,6 +49,7 @@ class Jog(Motion):
 
 class Cut(Motion):
     def get_gcode(self):
+        # print(self.changes)
         return (gc.G1(**self.changes), )
 
 

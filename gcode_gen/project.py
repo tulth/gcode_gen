@@ -12,7 +12,7 @@ from . import assembly
 #         super().kwinit(name, parent, state)
 
 
-class Header(assembly.TransformableAssemblyLeaf):
+class Header(assembly.Assembly):
     def get_preorder_actions(self):
         al = action.ActionList()
         al += action.Home(self.state)
@@ -24,9 +24,12 @@ class Header(assembly.TransformableAssemblyLeaf):
         return al
 
 
-class Footer(assembly.TransformableAssembly):
+class Footer(assembly.Assembly):
     def kwinit(self, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
+
+    def update_children_preorder(self):
+        self.del_idx = len(self.children)
         self += assembly.SafeJog(state=self.state).translate(z=self.state['z_safe'])
 
     def get_postorder_actions(self):
@@ -34,21 +37,18 @@ class Footer(assembly.TransformableAssembly):
         al += action.StopSpindle(self.state)
         return al
 
+    def update_children_postorder(self):
+        del self.children[self.del_idx]
 
-class ToolPass(assembly.TransformableAssembly):
+
+class ToolPass(assembly.Assembly):
     '''one gcode file, typically used one per tool needed for a project'''
-    def kwinit(self, name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
-        self += Header(state=self.state).translate(z=self.state['z_safe'])
-        self.save_children = None
+    def update_children_preorder(self):
+        self += Header()
+        self.children.insert(0, self.children.pop())
+        self += Footer()
 
-    def get_preorder_actions(self):
-        if self.save_children is None:
-            self.save_children = self.children[:]
-        else:
-            self.children = self.save_children
-        self += Footer(state=self.state)
-        return ()
-        # actions = super().get_actions()
-        # self.children = self.children[:-1]
-        # return actions
+    def update_children_postorder(self):
+        self.children = self.children[1:-1]
+
+

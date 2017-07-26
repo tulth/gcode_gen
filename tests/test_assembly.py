@@ -5,11 +5,11 @@ from gcode_gen.tool import Carbide3D_101
 from gcode_gen.state import CncState, DEFAULT_START
 
 
-class TestTransformableAssembly(unittest.TestCase):
+class TestAssembly(unittest.TestCase):
     def gen_test_tree(self):
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40)
-        TASM = assembly.TransformableAssembly
+        TASM = assembly.Assembly
         root = TASM(name='root', state=state)
         a = TASM(name='a')
         b = TASM(name='b')

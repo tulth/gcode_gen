@@ -4,10 +4,10 @@ from . import iter_util
 from . import point as pt
 from . import action
 from . import poly
-from .assembly import TransformableAssembly, TransformableAssemblyLeaf, SafeJog
+from .assembly import Assembly, SafeJog
 
 
-class UnsafeDrill(TransformableAssemblyLeaf):
+class UnsafeDrill(Assembly):
     def kwinit(self, depth, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
         self.depth = depth
@@ -25,7 +25,7 @@ class UnsafeDrill(TransformableAssemblyLeaf):
         return al
 
 
-class Drill(TransformableAssembly):
+class Drill(Assembly):
     '''drills a hole from z=0 to z=depth
     use .translate() to set the start x/y/z location of the drill action.
     '''
@@ -35,7 +35,7 @@ class Drill(TransformableAssembly):
         self += UnsafeDrill(depth=depth)
 
 
-class UnsafeMill(TransformableAssemblyLeaf):
+class UnsafeMill(Assembly):
     def kwinit(self, x=0, y=0, z=0, name=None, parent=None, state=None):
         super().kwinit(name=name, parent=parent, state=state)
         self.dest = pt.Point(x, y, z)
@@ -44,16 +44,14 @@ class UnsafeMill(TransformableAssemblyLeaf):
         al = action.ActionList()
         al += action.SetMillFeedRate(self.state)
         points = pt.PointList()
-        points.append(pt.Point(0, 0, 0))
         points.append(self.dest)
         points = pt.PointList(self.root_transforms(points.arr))
         cut = partial(action.Cut, state=self.state)
         al += cut(*(points[0].arr))
-        al += cut(*(points[1].arr))
         return al
 
 
-class Mill(TransformableAssembly):
+class Mill(Assembly):
     '''mills a hole from (0, 0, 0) offset to (x, y, z)
     use .translate() to set the start x/y/z location of the mill action.
     '''
@@ -70,7 +68,23 @@ CUT_STYLES = ('outside-cut',  # compensate for tool diameter for an OUTSIDE cut
               )
 
 
-class Polygon(TransformableAssembly):
+class UnsafeMillPath(Assembly):
+    def kwinit(self,
+               vertices,
+               name=None, parent=None, state=None):
+        super().kwinit(name=name, parent=parent, state=state)
+        self.vertices = vertices
+
+    def update_children_preorder(self):
+        for vert in self.vertices:
+            # print(vert)
+            self += UnsafeMill(x=vert[0], y=vert[1], z=vert[2])
+
+    def update_children_postorder(self):
+        self.children = []
+
+
+class Polygon(Assembly):
     '''repeatedly cut (simple) polygon to depth.'''
     def kwinit(self,
                vertices,
@@ -89,21 +103,20 @@ class Polygon(TransformableAssembly):
         assert not(self.is_filled)
         self.poly = poly.SimplePolygon(vertices)
 
-    def get_preorder_actions(self):
+    def update_children_preorder(self):
         pre_children_len = len(self.children)
         cut_poly = self.get_cut_poly()
         self += SafeJog().translate(x=cut_poly.arr[0][0], y=cut_poly.arr[0][1])
         #
         depth_per_pass = self.state['depth_per_milling_pass']
         z_cut_steps = number.calc_steps_with_max_spacing(0, -self.depth, depth_per_pass)
+        verts = list(iter_util.all_plus_first_iter(cut_poly.arr))
         for z_cut_step in z_cut_steps:
-            self += UnsafeMill(z=z_cut_step).translate(x=cut_poly.arr[0][0], y=cut_poly.arr[0][1])
-            for vert in iter_util.all_plus_first_iter(cut_poly.arr):
-                assert number.isclose(vert[2], 0)
-                self += UnsafeMill(x=vert[0], y=vert[1], )
-        #
-        # FIXME self.children = self.children[:(pre_children_len - 1)]
+            self += UnsafeMillPath(vertices=verts).translate(z=z_cut_step)
         return ()
+
+    def update_children_postorder(self):
+        self.children = []
 
     def get_cut_poly(self):
         tool_dia = self.state['tool'].cut_diameter
