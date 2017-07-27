@@ -4,14 +4,6 @@ from . import action
 from . import assembly
 
 
-# class ToolPass(assembly.Assembly):
-#     def kwinit(self, name=None, parent=None, tool=None, state=None):
-#         assert state['tool'] is None
-#         assert isinstance(tool, Tool)
-#         state['tool'] = tool
-#         super().kwinit(name, parent, state)
-
-
 class Header(assembly.Assembly):
     def get_preorder_actions(self):
         al = action.ActionList()
@@ -25,8 +17,8 @@ class Header(assembly.Assembly):
 
 
 class Footer(assembly.Assembly):
-    def kwinit(self, name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
+    def __init__(self, name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent, state=state)
 
     def update_children_preorder(self):
         self.del_idx = len(self.children)
@@ -43,6 +35,17 @@ class Footer(assembly.Assembly):
 
 class ToolPass(assembly.Assembly):
     '''one gcode file, typically used one per tool needed for a project'''
+    def update_children_preorder(self):
+        self += Header()
+        self.children.insert(0, self.children.pop())
+        self += Footer()
+
+    def update_children_postorder(self):
+        self.children = self.children[1:-1]
+
+
+class Project(assembly.Assembly):
+    '''Gcode generation project made up of multiple tool passes'''
     def update_children_preorder(self):
         self += Header()
         self.children.insert(0, self.children.pop())

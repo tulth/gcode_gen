@@ -3,8 +3,8 @@ from . import base_types
 
 
 class Tree(base_types.Named):
-    def kwinit(self, name=None, parent=None):
-        super().kwinit(name)
+    def __init__(self, name=None, parent=None):
+        super().__init__(name)
         self.parent = parent
         self.children = []
 

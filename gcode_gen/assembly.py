@@ -10,8 +10,8 @@ from . import action
 
 class Assembly(tree.Tree, transform.TransformableMixin):
     '''tree of assembly items'''
-    def kwinit(self, name=None, parent=None, state=None):
-        super().kwinit(name, parent)
+    def __init__(self, name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent)
         self.state = state
         if state is not None:
             if not isinstance(state, CncState):
@@ -86,8 +86,8 @@ class Assembly(tree.Tree, transform.TransformableMixin):
 
 
 class SafeJog(Assembly):
-    def kwinit(self, name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
+    def __init__(self, name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent, state=state)
 
     def get_preorder_actions(self):
         al = action.ActionList()
@@ -101,8 +101,8 @@ class SafeJog(Assembly):
 
 
 class SafeZ(Assembly):
-    def kwinit(self, name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
+    def __init__(self, name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent, state=state)
 
     def get_preorder_actions(self):
         al = action.ActionList()

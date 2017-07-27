@@ -8,8 +8,8 @@ from .assembly import Assembly, SafeJog
 
 
 class UnsafeDrill(Assembly):
-    def kwinit(self, depth, name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
+    def __init__(self, depth, name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent, state=state)
         self.depth = depth
 
     def get_preorder_actions(self):
@@ -29,15 +29,15 @@ class Drill(Assembly):
     '''drills a hole from z=0 to z=depth
     use .translate() to set the start x/y/z location of the drill action.
     '''
-    def kwinit(self, depth, name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
+    def __init__(self, depth, name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent, state=state)
         self += SafeJog()
         self += UnsafeDrill(depth=depth)
 
 
 class UnsafeMill(Assembly):
-    def kwinit(self, x=0, y=0, z=0, name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
+    def __init__(self, x=0, y=0, z=0, name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent, state=state)
         self.dest = pt.Point(x, y, z)
 
     def get_preorder_actions(self):
@@ -55,8 +55,8 @@ class Mill(Assembly):
     '''mills a hole from (0, 0, 0) offset to (x, y, z)
     use .translate() to set the start x/y/z location of the mill action.
     '''
-    def kwinit(self, x=0, y=0, z=0, name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
+    def __init__(self, x=0, y=0, z=0, name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent, state=state)
         self += SafeJog()
         self += UnsafeMill()  # move to start point
         self += UnsafeMill(x=x, y=y, z=z)
@@ -69,10 +69,10 @@ CUT_STYLES = ('outside-cut',  # compensate for tool diameter for an OUTSIDE cut
 
 
 class UnsafeMillPath(Assembly):
-    def kwinit(self,
-               vertices,
-               name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
+    def __init__(self,
+                 vertices,
+                 name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent, state=state)
         self.vertices = vertices
 
     def update_children_preorder(self):
@@ -86,13 +86,13 @@ class UnsafeMillPath(Assembly):
 
 class Polygon(Assembly):
     '''repeatedly cut (simple) polygon to depth.'''
-    def kwinit(self,
-               vertices,
-               depth,
-               cut_style,
-               is_filled,
-               name=None, parent=None, state=None):
-        super().kwinit(name=name, parent=parent, state=state)
+    def __init__(self,
+                 vertices,
+                 depth,
+                 cut_style,
+                 is_filled,
+                 name=None, parent=None, state=None):
+        super().__init__(name=name, parent=parent, state=state)
         self.depth = depth
         if cut_style not in CUT_STYLES:
             raise TypeError('cut_style must be in {}; given arg {}'.format(CUT_STYLES, cut_style))
