@@ -60,11 +60,14 @@ class State(dict):
         self.update(nosave_key_vals)
         self.update(stored_state)
 
+    def copy(self):
+        return self.__class__(self)
+
 
 class CncState(State):
     def __init__(self,
-                 tool,
-                 z_safe,
+                 tool=None,
+                 z_safe=None,
                  spindle_speed=None,
                  depth_per_milling_pass=0.4,
                  milling_feed_rate=150,
@@ -73,8 +76,6 @@ class CncState(State):
                  milling_overlap=0.15,
                  z_margin=0.5,
                  position=None):
-        if not isinstance(tool, Tool):
-            raise TypeError("tool argument must be of type Tool")
         super().__init__()
         self['tool'] = tool
         self['z_safe'] = z_safe

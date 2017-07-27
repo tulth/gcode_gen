@@ -1,16 +1,23 @@
 import numpy as np
+from . import base_types
 from . import number
 
 
-class Tool(object):
+class Tool(base_types.Named):
     def __init__(self,
                  cut_diameter,
                  cut_height,
                  shank_diameter=(1 / 8 * number.mm_per_inch),
+                 name=None,
                  ):
+        super().__init__(name)
         self.cut_diameter = cut_diameter
         self.shank_diameter = shank_diameter
         self.cut_height = cut_height
+
+    @property
+    def default_name(self):
+        return self.__class__.__name__
 
 
 class Carbide3D_101(Tool):
