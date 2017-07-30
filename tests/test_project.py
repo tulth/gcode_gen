@@ -186,10 +186,15 @@ class TestProject(unittest.TestCase):
             prj = project.Project(name=str(filepath))
             prj.state['z_safe'] = 40
             prj.state['milling_feed_rate'] = 50
-            prj += Carbide3D_101()
+            c101_tool = Carbide3D_101()
+            prj += c101_tool
             c101pass = prj.last()
             c101pass += Mill(x=17, y=19).translate(7, 11)
-            prj += Carbide3D_102()
+            # asm = Assembly()
+            # c101pass += asm
+            # asm += Mill(x=27, y=29).translate(7, 11)
+            c102_tool = Carbide3D_102()
+            prj += c102_tool
             c102pass = prj.last()
             c102pass += Mill(x=-13, y=-15).translate(7, 11)
             capturedOutput = StringIO()
@@ -236,4 +241,5 @@ M5
                 with open(filename + '.gcode', 'r') as act_file:
                     actual = act_file.read()
                 self.assertEqual(actual, expect)
-
+            self.assertEqual(c101pass.state['tool'], c101_tool)
+            self.assertEqual(c102pass.state['tool'], c102_tool)
