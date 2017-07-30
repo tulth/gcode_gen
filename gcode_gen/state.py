@@ -61,7 +61,7 @@ class State(dict):
         self.update(stored_state)
 
     def copy(self):
-        return self.__class__(self)
+        return self.__class__(**self)
 
 
 class CncState(State):

@@ -72,3 +72,8 @@ class TestCncState(unittest.TestCase):
         self.assertEqual(state['feed_rate'], 40)
         self.assertEqual(state['z_safe'], 45)
 
+    def test_copy(self):
+        tool = Carbide3D_101()
+        state = CncState(milling_feed_rate=40)
+        self.assertEqual(state['milling_feed_rate'], 40)
+        self.assertEqual(state.copy()['milling_feed_rate'], 40)
