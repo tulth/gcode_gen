@@ -12,21 +12,27 @@ class Assembly(tree.Tree, transform.TransformableMixin):
     '''tree of assembly items'''
     def __init__(self, name=None, parent=None, state=None):
         super().__init__(name=name, parent=parent)
-        self.state = state
         if state is not None:
             if not isinstance(state, CncState):
                 raise TypeError('state must be of type CncState')
+        self._state = state
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, new_state):
+        self._state = new_state
+        for child in self.children:
+            child.state = self.state
 
     def check_type(self, other):
         assert isinstance(other, Assembly)
 
     def append(self, arg):
         super().append(arg)
-        # arg.state = self.state
-        for walk_step in arg.depth_first_walk():
-            if walk_step.is_visit and walk_step.is_preorder:
-                node = walk_step.visited
-                node.state = self.state
+        arg.state = self.state
 
     def last(self):
         return self.children[-1]

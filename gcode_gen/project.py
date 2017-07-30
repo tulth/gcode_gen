@@ -78,8 +78,9 @@ class Project(assembly.Assembly):
         name = '{}_{}'.format(self.name, tool.name)
         state_copy = self.state.copy()
         state_copy['tool'] = tool
-        tool_pass = ToolPass(name=name, state=state_copy)
+        tool_pass = ToolPass(name=name)
         super().append(tool_pass)
+        tool_pass.state = state_copy
 
     def write_gcode_files(self, do_print=True):
         '''dump gcode for each toolpass to a file'''

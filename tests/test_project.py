@@ -181,6 +181,7 @@ M5
 
 class TestProject(unittest.TestCase):
     def test_write_gcode_files(self):
+        self.maxDiff = None
         with tempfile.TemporaryDirectory() as tmpdirname:
             filepath = pathlib.Path(tmpdirname) / 'test_write_gcode_files'
             prj = project.Project(name=str(filepath))
