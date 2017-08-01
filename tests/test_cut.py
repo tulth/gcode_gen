@@ -47,7 +47,7 @@ class TestSafeJog(unittest.TestCase):
         actual = '\n'.join(map(str, gcl)) + '\n'
         expected = '''G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
+G0 Z0.00000
 '''
         self.assertEqual(actual, expected)
 
@@ -60,7 +60,7 @@ G0 Z0.50000
         actual = pl.arr
         expect = np.array(((0, 0, 40),
                            (7, 11, 40),
-                           (7, 11, 0.5),
+                           (7, 11, 0),
                            ))
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
@@ -90,7 +90,7 @@ class TestDrill(unittest.TestCase):
         actual = '\n'.join(map(str, gcl)) + '\n'
         expected = '''G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
+G0 Z0.00000
 F 20.00000
 G1 Z-13.00000
 G1 Z0.00000
@@ -107,7 +107,7 @@ G1 Z0.00000
         actual = '\n'.join(map(str, gcl)) + '\n'
         expected = '''G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
+G0 Z0.00000
 F 20.00000
 G1 Z-13.00000
 G1 Z0.00000
@@ -127,7 +127,7 @@ G1 Z0.00000
         actual = pl.arr
         expect = np.array(((0, 0, 40),
                            (7, 11, 40),
-                           (7, 11, 0.5),
+                           (7, 11, 0.0),
                            (7, 11, -13),
                            (7, 11, 0),
                            ))
@@ -145,9 +145,8 @@ class TestMill(unittest.TestCase):
         actual = str(al)
         expect = '''Jog (0.00000, 0.00000, 40.00000)
 Jog (7.00000, 11.00000, 40.00000)
-Jog (7.00000, 11.00000, 0.50000)
-SetMillFeedRate (7.00000, 11.00000, 0.50000) 50.00000
-Cut (7.00000, 11.00000, 0.00000)
+Jog (7.00000, 11.00000, 0.00000)
+SetMillFeedRate (7.00000, 11.00000, 0.00000) 50.00000
 Cut (24.00000, 30.00000, 0.00000)
 Jog (24.00000, 30.00000, 40.00000)'''
         self.assertEqual(actual, expect)
@@ -161,9 +160,8 @@ Jog (24.00000, 30.00000, 40.00000)'''
         actual = '\n'.join(map(str, gcl))
         expected = '''G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
+G0 Z0.00000
 F 50.00000
-G1 Z0.00000
 G1 X24.00000 Y30.00000'''
         self.assertEqual(actual, expected)
 
@@ -178,9 +176,8 @@ G1 X24.00000 Y30.00000'''
         actual = '\n'.join(map(str, gcl)) + '\n'
         expected = '''G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
+G0 Z0.00000
 F 50.00000
-G1 Z0.00000
 G1 X24.00000 Y30.00000
 G0 Z40.00000
 '''
@@ -200,7 +197,6 @@ G0 Z40.00000
         actual = pl.arr
         expect = np.array(((0, 0, 40),
                            (7, 11, 40),
-                           (7, 11, 0.5),
                            (7, 11, 0),
                            (24, 30, 0),
                            (24, 30, 40),
@@ -228,9 +224,8 @@ class TestPolygon(unittest.TestCase):
         # print(actual)
         expected = '''G0 Z40.00000
 G0 X6.00000 Y10.00000
-G0 Z0.50000
+G0 Z0.00000
 F 40.00000
-G1 Z0.00000
 G1 X8.00000
 G1 Y12.00000
 G1 X6.00000

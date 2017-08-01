@@ -42,6 +42,7 @@ F 50.00000'''
 
 class TestFooter(unittest.TestCase):
     def test_get_actions(self):
+        self.maxDiff = None
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40, feed_rate=150, milling_feed_rate=50)
         root = Assembly(name='header', state=state)
@@ -51,14 +52,12 @@ class TestFooter(unittest.TestCase):
         actual = str(al)
         expect = '''Jog (0.00000, 0.00000, 40.00000)
 Jog (7.00000, 11.00000, 40.00000)
-Jog (7.00000, 11.00000, 0.50000)
-SetMillFeedRate (7.00000, 11.00000, 0.50000) 50.00000
-Cut (7.00000, 11.00000, 0.00000)
+Jog (7.00000, 11.00000, 0.00000)
+SetMillFeedRate (7.00000, 11.00000, 0.00000) 50.00000
 Cut (24.00000, 30.00000, 0.00000)
 Jog (24.00000, 30.00000, 40.00000)
 Jog (0.00000, 0.00000, 40.00000)
-Jog (0.00000, 0.00000, 40.50000)
-StopSpindle (0.00000, 0.00000, 40.50000)'''
+StopSpindle (0.00000, 0.00000, 40.00000)'''
         self.assertEqual(actual, expect)
 
     def test_get_gcode(self):
@@ -71,13 +70,11 @@ StopSpindle (0.00000, 0.00000, 40.50000)'''
         actual = '\n'.join(map(str, gcl))
         expect = '''G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
+G0 Z0.00000
 F 50.00000
-G1 Z0.00000
 G1 X24.00000 Y30.00000
 G0 Z40.00000
 G0 X0.00000 Y0.00000
-G0 Z40.50000
 M5'''
         self.assertEqual(actual, expect)
 
@@ -100,13 +97,11 @@ ActivateSpindleCW (0.00000, 0.00000, 70.00000)
 SetFeedRate (0.00000, 0.00000, 70.00000) 50.00000
 Jog (0.00000, 0.00000, 40.00000)
 Jog (7.00000, 11.00000, 40.00000)
-Jog (7.00000, 11.00000, 0.50000)
-Cut (7.00000, 11.00000, 0.00000)
+Jog (7.00000, 11.00000, 0.00000)
 Cut (24.00000, 30.00000, 0.00000)
 Jog (24.00000, 30.00000, 40.00000)
 Jog (0.00000, 0.00000, 40.00000)
-Jog (0.00000, 0.00000, 40.50000)
-StopSpindle (0.00000, 0.00000, 40.50000)'''
+StopSpindle (0.00000, 0.00000, 40.00000)'''
         self.assertEqual(actual, expect)
 
     def test_get_gcode(self):
@@ -124,12 +119,10 @@ M3
 F 50.00000
 G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
-G1 Z0.00000
+G0 Z0.00000
 G1 X24.00000 Y30.00000
 G0 Z40.00000
 G0 X0.00000 Y0.00000
-G0 Z40.50000
 M5'''
         self.assertEqual(actual, expect)
         #
@@ -168,12 +161,10 @@ M3
 F 50.00000
 G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
-G1 Z0.00000
+G0 Z0.00000
 G1 X24.00000 Y30.00000
 G0 Z40.00000
 G0 X0.00000 Y0.00000
-G0 Z40.50000
 M5
 '''
         self.assertEqual(actual, expect)
@@ -214,12 +205,10 @@ M3
 F 50.00000
 G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
-G1 Z0.00000
+G0 Z0.00000
 G1 X24.00000 Y30.00000
 G0 Z40.00000
 G0 X0.00000 Y0.00000
-G0 Z40.50000
 M5
 '''
             expect1 = '''$H
@@ -230,12 +219,10 @@ M3
 F 50.00000
 G0 Z40.00000
 G0 X7.00000 Y11.00000
-G0 Z0.50000
-G1 Z0.00000
+G0 Z0.00000
 G1 X-6.00000 Y-4.00000
 G0 Z40.00000
 G0 X0.00000 Y0.00000
-G0 Z40.50000
 M5
 '''
             for filename, expect in zip(map(lambda x: x.name, prj.children), (expect0, expect1)):

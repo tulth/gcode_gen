@@ -95,14 +95,22 @@ class SafeJog(Assembly):
     def __init__(self, name=None, parent=None, state=None):
         super().__init__(name=name, parent=parent, state=state)
 
+    @property
+    def point(self):
+        return pt.PointList(self.root_transforms(pt.PL_ZERO.arr))[0]
+
+    @property
+    def changes(self):
+        return pt.changes(self.pos, self.point)
+
     def get_preorder_actions(self):
         al = action.ActionList()
-        points = pt.PointList(((0, 0, self.state['z_margin']), ))
-        point = pt.PointList(self.root_transforms(points.arr))[0]
-        jog = partial(action.Jog, state=self.state)
-        al += jog(x=self.pos.x, y=self.pos.y, z=self.state['z_safe'])
-        al += jog(x=point.x, y=point.y, z=self.pos.z)
-        al += jog(x=point.x, y=point.y, z=point.z)
+        if self.changes:
+            point = self.point
+            jog = partial(action.Jog, state=self.state)
+            al += jog(x=self.pos.x, y=self.pos.y, z=self.state['z_safe'])
+            al += jog(x=point.x, y=point.y, z=self.pos.z)
+            al += jog(x=point.x, y=point.y, z=point.z)
         return al
 
 
