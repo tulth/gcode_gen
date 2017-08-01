@@ -81,7 +81,7 @@ class PointList(MutableSequence):
         if isinstance(arg, PointList):
             return arg.arr
         elif isinstance(arg, Point):
-            return np.asarray((arg.arr))
+            return np.asarray((arg.arr, ))
         elif isinstance(arg, np.ndarray):
             if len(arg.shape) == 1:
                 return np.asarray(((Point(*arg).arr, )))

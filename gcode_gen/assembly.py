@@ -14,7 +14,7 @@ class Assembly(tree.Tree, transform.TransformableMixin):
         super().__init__(name=name, parent=parent)
         if state is not None:
             if not isinstance(state, CncState):
-                raise TypeError('state must be of type CncState')
+                raise TypeError('state must be of type CncState, not {}'.format(type(state)))
         self._state = state
 
     @property

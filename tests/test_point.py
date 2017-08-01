@@ -68,6 +68,10 @@ class TestPointList(unittest.TestCase):
         pl = point.PointList()
         self.assertEqual(pl.shape, (0, 3))
 
+    def test_PL_ZERO(self):
+        pl = point.PL_ZERO
+        self.assertEqual(pl.shape, (1, 3))
+
     def test_2d_single(self):
         pl = point.PointList()
         pl.append(point.Point(1, 2))

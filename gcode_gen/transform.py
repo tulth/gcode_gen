@@ -72,7 +72,7 @@ class TransformList(list):
         if not isinstance(arr, np.ndarray):
             raise TypeError("expected argument to be numpy ndarray")
         if len(arr.shape) != 2:
-            raise TypeError("expected argument.shape to be length 2")
+            raise TypeError("expected argument.shape to be length 2, not {}".format(len(arr.shape)))
         if arr.shape[1] != 3:
             raise TypeError("expected argument to be array of 3-d points")
         if arr.shape[0] == 0:
