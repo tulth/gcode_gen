@@ -92,12 +92,13 @@ class Assembly(tree.Tree, transform.TransformableMixin):
 
 
 class SafeJog(Assembly):
-    def __init__(self, name=None, parent=None, state=None):
+    def __init__(self, x=0, y=0, z=0, name=None, parent=None, state=None):
         super().__init__(name=name, parent=parent, state=state)
+        self.dest = pt.PointList(((x, y, z), ))
 
     @property
     def point(self):
-        return pt.PointList(self.root_transforms(pt.PL_ZERO.arr))[0]
+        return pt.PointList(self.root_transforms(self.dest.arr))[0]
 
     @property
     def changes(self):
@@ -105,12 +106,13 @@ class SafeJog(Assembly):
 
     def get_preorder_actions(self):
         al = action.ActionList()
+        # print(self.changes)
         if self.changes:
-            point = self.point
             jog = partial(action.Jog, state=self.state)
             al += jog(x=self.pos.x, y=self.pos.y, z=self.state['z_safe'])
-            al += jog(x=point.x, y=point.y, z=self.pos.z)
-            al += jog(x=point.x, y=point.y, z=point.z)
+            al += jog(x=self.point.x, y=self.point.y, z=self.pos.z)
+            al += jog(x=self.point.x, y=self.point.y, z=self.point.z)
+            # print("safejog", self.state['position'])
         return al
 
 

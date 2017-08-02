@@ -29,6 +29,9 @@ class XYZ(object):
     def z(self):
         return self.xyz[2]
 
+    def __iter__(self):
+        return iter(self.xyz)
+
 
 class Point(XYZ):
     '''Point class for representing 3-d x/y/z cartesian coordinates.

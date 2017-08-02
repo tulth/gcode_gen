@@ -139,7 +139,7 @@ class TestMill(unittest.TestCase):
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40, feed_rate=150, milling_feed_rate=50)
         root = assembly.Assembly(name='root', state=state)
-        root += cut.Mill(x=17, y=19).translate(7, 11)
+        root += cut.Mill(((0, 0), (17, 19))).translate(7, 11)
         root += assembly.SafeZ()
         al = root.get_actions()
         actual = str(al)
@@ -155,7 +155,7 @@ Jog (24.00000, 30.00000, 40.00000)'''
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40, feed_rate=150, milling_feed_rate=50)
         root = assembly.Assembly(name='root', state=state)
-        root += cut.Mill(x=17, y=19).translate(7, 11)
+        root += cut.Mill(((0, 0), (17, 19))).translate(7, 11)
         gcl = root.get_gcode()
         actual = '\n'.join(map(str, gcl))
         expected = '''G0 Z40.00000
@@ -169,7 +169,7 @@ G1 X24.00000 Y30.00000'''
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40, feed_rate=150, milling_feed_rate=50)
         root = assembly.Assembly(name='root', state=state)
-        root += cut.Mill(x=17, y=19).translate(7, 11)
+        root += cut.Mill(((0, 0), (17, 19))).translate(7, 11)
         root += assembly.SafeZ()
         #
         gcl = root.get_gcode()
@@ -191,7 +191,7 @@ G0 Z40.00000
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40, feed_rate=150, milling_feed_rate=50)
         root = assembly.Assembly(name='root', state=state)
-        root += cut.Mill(x=17, y=19).translate(7, 11)
+        root += cut.Mill(((0, 0), (17, 19))).translate(7, 11)
         root += assembly.SafeZ()
         pl = root.get_points()
         actual = pl.arr
@@ -202,6 +202,28 @@ G0 Z40.00000
                            (24, 30, 40),
                            ))
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
+
+    def test_mills(self):
+        tool = Carbide3D_101()
+        state = CncState(tool=tool, z_safe=40, feed_rate=150, milling_feed_rate=50)
+        root = assembly.Assembly(name='root', state=state)
+        root += cut.Mill(((0, 0),
+                          (-1, 0),
+                          (1, 0),
+                          (-1, 0), ))
+        root.translate(7, 11)
+        gcl = root.get_gcode()
+        print(root.get_actions())
+        actual = '\n'.join(map(str, gcl))
+        expected = '''G0 Z40.00000
+G0 X7.00000 Y11.00000
+G0 Z0.00000
+F 50.00000
+G1 X6.00000
+G1 X8.00000
+G1 X6.00000'''
+        print(actual)
+        self.assertEqual(actual, expected)
 
 
 test_square = [[-1, -1, 0], [1, -1, 0], [1, 1, 0], [-1, 1, 0], ]
@@ -224,8 +246,9 @@ class TestPolygon(unittest.TestCase):
         # print(actual)
         expected = '''G0 Z40.00000
 G0 X6.00000 Y10.00000
-G0 Z0.00000
+G0 Z0.50000
 F 40.00000
+G1 Z0.00000
 G1 X8.00000
 G1 Y12.00000
 G1 X6.00000

@@ -35,6 +35,12 @@ class Drill(Assembly):
         self += UnsafeDrill(depth=depth)
 
 
+CUT_STYLES = ('outside-cut',  # compensate for tool diameter for an OUTSIDE cut
+              'inside-cut',   # compensate for tool diameter for an INSIDE cut
+              'follow-cut',   # no compensation
+              )
+
+
 class UnsafeMill(Assembly):
     def __init__(self, x=0, y=0, z=0, name=None, parent=None, state=None):
         super().__init__(name=name, parent=parent, state=state)
@@ -52,33 +58,26 @@ class UnsafeMill(Assembly):
 
 
 class Mill(Assembly):
-    '''mills a hole from (0, 0, 0) offset to (x, y, z)
-    use .translate() to set the start x/y/z location of the mill action.
-    '''
-    def __init__(self, x=0, y=0, z=0, name=None, parent=None, state=None):
-        super().__init__(name=name, parent=parent, state=state)
-        self += SafeJog()
-        self += UnsafeMill()  # move to start point
-        self += UnsafeMill(x=x, y=y, z=z)
-
-
-CUT_STYLES = ('outside-cut',  # compensate for tool diameter for an OUTSIDE cut
-              'inside-cut',   # compensate for tool diameter for an INSIDE cut
-              'follow-cut',   # no compensation
-              )
-
-
-class UnsafeMillPath(Assembly):
     def __init__(self,
                  vertices,
                  name=None, parent=None, state=None):
         super().__init__(name=name, parent=parent, state=state)
-        self.vertices = vertices
+        self.vertices = pt.PointList(vertices)
 
     def update_children_preorder(self):
-        for vert in self.vertices:
-            # print(vert)
-            self += UnsafeMill(x=vert[0], y=vert[1], z=vert[2])
+        # print('update_children_preorder')
+        self += SafeJog(*(self.vertices[0]))
+
+    def get_postorder_actions(self):
+        # print('get_preorder_actions')
+        al = action.ActionList()
+        # print(self.state['position'])
+        al += action.SetMillFeedRate(self.state)
+        points = pt.PointList(self.root_transforms(self.vertices.arr))
+        for point in points[1:]:
+            cut = partial(action.Cut, state=self.state)
+            al += cut(*(point.arr))
+        return al
 
     def update_children_postorder(self):
         self.children = []
@@ -106,13 +105,14 @@ class Polygon(Assembly):
     def update_children_preorder(self):
         pre_children_len = len(self.children)
         cut_poly = self.get_cut_poly()
-        self += SafeJog().translate(x=cut_poly.arr[0][0], y=cut_poly.arr[0][1])
+        self += SafeJog(x=cut_poly.arr[0][0], y=cut_poly.arr[0][1], z=self.state['z_margin'])
         #
         depth_per_pass = self.state['depth_per_milling_pass']
         z_cut_steps = number.calc_steps_with_max_spacing(0, -self.depth, depth_per_pass)
         verts = list(iter_util.all_plus_first_iter(cut_poly.arr))
         for z_cut_step in z_cut_steps:
-            self += UnsafeMillPath(vertices=verts).translate(z=z_cut_step)
+            self += UnsafeMill(*verts[0]).translate(z=z_cut_step)
+            self += Mill(vertices=verts).translate(z=z_cut_step)
         return ()
 
     def update_children_postorder(self):
