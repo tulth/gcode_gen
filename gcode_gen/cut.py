@@ -31,8 +31,17 @@ class Drill(Assembly):
     '''
     def __init__(self, depth, name=None, parent=None, state=None):
         super().__init__(name=name, parent=parent, state=state)
+        self.depth = depth
+
+    def update_children_preorder(self):
         self += SafeJog()
-        self += UnsafeDrill(depth=depth)
+        depth_per_pass = self.state['depth_per_drilling_pass']
+        z_cut_steps = number.calc_steps_with_max_spacing(0, -self.depth, depth_per_pass)
+        for z_cut_step in z_cut_steps:
+            self += UnsafeDrill(depth=-z_cut_step)
+
+    def update_children_postorder(self):
+        self.children = []
 
 
 CUT_STYLES = ('outside-cut',  # compensate for tool diameter for an OUTSIDE cut

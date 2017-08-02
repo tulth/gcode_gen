@@ -82,26 +82,11 @@ G1 Z0.00000
 
 class TestDrill(unittest.TestCase):
     def test_get_gcode(self):
+        self.maxDiff = None
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40, feed_rate=150, drilling_feed_rate=20)
         root = assembly.Assembly(name='root', state=state)
-        root += cut.Drill(depth=13).translate(7, 11)
-        gcl = root.get_gcode()
-        actual = '\n'.join(map(str, gcl)) + '\n'
-        expected = '''G0 Z40.00000
-G0 X7.00000 Y11.00000
-G0 Z0.00000
-F 20.00000
-G1 Z-13.00000
-G1 Z0.00000
-'''
-        self.assertEqual(actual, expected)
-
-    def test_get_gcode_x2(self):
-        tool = Carbide3D_101()
-        state = CncState(tool=tool, z_safe=40, feed_rate=150, drilling_feed_rate=20)
-        root = assembly.Assembly(name='root', state=state)
-        root += cut.Drill(depth=13).translate(7, 11)
+        root += cut.Drill(depth=9.9).translate(7, 11)
         #
         gcl = root.get_gcode()
         actual = '\n'.join(map(str, gcl)) + '\n'
@@ -109,7 +94,25 @@ G1 Z0.00000
 G0 X7.00000 Y11.00000
 G0 Z0.00000
 F 20.00000
-G1 Z-13.00000
+G1 Z-0.99000
+G1 Z0.00000
+G1 Z-1.98000
+G1 Z0.00000
+G1 Z-2.97000
+G1 Z0.00000
+G1 Z-3.96000
+G1 Z0.00000
+G1 Z-4.95000
+G1 Z0.00000
+G1 Z-5.94000
+G1 Z0.00000
+G1 Z-6.93000
+G1 Z0.00000
+G1 Z-7.92000
+G1 Z0.00000
+G1 Z-8.91000
+G1 Z0.00000
+G1 Z-9.90000
 G1 Z0.00000
 '''
         self.assertEqual(actual, expected)
@@ -122,13 +125,29 @@ G1 Z0.00000
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40)
         root = assembly.Assembly(name='root', state=state)
-        root += cut.Drill(depth=13).translate(7, 11)
+        root += cut.Drill(depth=9).translate(7, 11)
         pl = root.get_points()
         actual = pl.arr
         expect = np.array(((0, 0, 40),
                            (7, 11, 40),
-                           (7, 11, 0.0),
-                           (7, 11, -13),
+                           (7, 11, 0),
+                           (7, 11, -1),
+                           (7, 11, 0),
+                           (7, 11, -2),
+                           (7, 11, 0),
+                           (7, 11, -3),
+                           (7, 11, 0),
+                           (7, 11, -4),
+                           (7, 11, 0),
+                           (7, 11, -5),
+                           (7, 11, 0),
+                           (7, 11, -6),
+                           (7, 11, 0),
+                           (7, 11, -7),
+                           (7, 11, 0),
+                           (7, 11, -8),
+                           (7, 11, 0),
+                           (7, 11, -9),
                            (7, 11, 0),
                            ))
         self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
@@ -213,7 +232,7 @@ G0 Z40.00000
                           (-1, 0), ))
         root.translate(7, 11)
         gcl = root.get_gcode()
-        print(root.get_actions())
+        # print(root.get_actions())
         actual = '\n'.join(map(str, gcl))
         expected = '''G0 Z40.00000
 G0 X7.00000 Y11.00000
@@ -222,7 +241,7 @@ F 50.00000
 G1 X6.00000
 G1 X8.00000
 G1 X6.00000'''
-        print(actual)
+        # print(actual)
         self.assertEqual(actual, expected)
 
 

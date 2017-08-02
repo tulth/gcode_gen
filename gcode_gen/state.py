@@ -70,7 +70,8 @@ class CncState(State):
                  z_safe=None,
                  spindle_speed=None,
                  depth_per_milling_pass=0.4,
-                 milling_feed_rate=150,
+                 depth_per_drilling_pass=1.0,
+                 milling_feed_rate=50,
                  drilling_feed_rate=20,
                  feed_rate=None,
                  milling_overlap=0.15,
@@ -80,6 +81,7 @@ class CncState(State):
         self['tool'] = tool
         self['z_safe'] = z_safe
         self['spindle_speed'] = spindle_speed
+        self['depth_per_drilling_pass'] = depth_per_drilling_pass
         self['depth_per_milling_pass'] = depth_per_milling_pass
         self['milling_feed_rate'] = milling_feed_rate
         self['drilling_feed_rate'] = drilling_feed_rate
