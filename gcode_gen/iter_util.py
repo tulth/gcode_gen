@@ -15,6 +15,15 @@ def pairwise_iter(arg):
     return zip(a, b)
 
 
+def is_first_tup(arg):
+    '''yield tuple (val, is_first) for each val in arg; only sets is_first on the first value of arg'''
+    iter_arg = iter(arg)
+    first_element = next(iter_arg)
+    yield first_element, True
+    for remaining in iter_arg:
+        yield remaining, False
+
+
 def all_plus_first_iter(arg):
     '''Yield each element of a list, then yield the first one more time at the end'''
     iter_arg = iter(arg)
