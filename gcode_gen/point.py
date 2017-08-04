@@ -138,6 +138,12 @@ class PointList(MutableSequence):
             raise KeyError('slice assignment not supported')
         self._arr = np.insert(self._arr, index, value.arr.reshape(1, 3), axis=0)
 
+    def __str__(self):
+        if len(self) == 0:
+            return '()'
+        points_str = '\n '.join(['{},'.format(point) for point in self])
+        return '({} )'.format(points_str)
+
 
 PL_ZERO = PointList(Point())
 
