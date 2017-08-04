@@ -35,6 +35,9 @@ class FillEdge(object):
         fs = "p0:{} p1:{} y_max:{} y_min:{} x_base:{} x_slope:{}"
         return fs.format(self.p0, self.p1, self.y_max, self.y_min, self.x_base, self.x_slope, )
 
+    def __eq__(self, other):
+        return (self.p0 == other.p0) and (self.p1 == other.p1)
+
 
 class FillEdgeTable(list):
     def __init__(self, poly):
@@ -55,18 +58,27 @@ class FillEdgeTable(list):
 
 
 def calc_polygon_fill_vertices(pgon, max_spacing):
-    '''Traces out a scan-line path to fill a given polygon with a max spacing between rows
+    '''Traces out a y-min to y-max scan-line path to fill a given polygon with a
+    max spacing between rows.
     args:
-    polyon to fill
-    max spacing between passes '''
+      polyon to fill
+      max spacing between passes
+    result:
+      tuple of (gcode_gen.point.PointList, sequence(bool)) where
+        the point list contains the fill points and
+        the sequence of bools indicate
+          a cut when true, else indicates a jog (aka travel) action for each point'''
     assert isinstance(pgon, poly.SimplePolygon)
-    result = pt.PointList()
+    result_point_list = pt.PointList()
+    result_iscut_list = []
     bounds = pgon.bounds
     pgon_y_min, pgon_y_max = bounds[1]
     y_step_list = number.calc_steps_with_max_spacing(pgon_y_min, pgon_y_max, max_spacing)
     edge_table = FillEdgeTable(pgon)
     cuts, jogs = [], []
-    # [1:-1] because the perimeter trace already handles this
+    # [1:-1] because the perimeter trace already handles top and bottom
+    last_edge = None
+    dir_left_to_right = True
     for y_step in list(y_step_list)[1:-1]:
         active_list = []
         wait_list = []
@@ -75,13 +87,15 @@ def calc_polygon_fill_vertices(pgon, max_spacing):
                 active_list.append(edge)
         active_list = sorted(active_list,
                              key=lambda edge: edge.get_x_for_y(y_step))
+        if not dir_left_to_right:
+            active_list = list(reversed(active_list))
         raw_points = []
         for edge in active_list:
             point = pt.Point(edge.get_x_for_y(y_step), y_step)
             raw_points.append(point)
         delete_indices = []
         for idx, ((p0, e0), (p1, e1)) in enumerate(iter_util.pairwise_iter(zip(raw_points, active_list))):
-            # when we hit a vertex, two consecutive points are equal
+            # when two consecutive points are equal, we hit a vertex
             # drop both points for maxima/minima
             # otherwise, drop 1 point
             if p0 == p1:
@@ -90,23 +104,33 @@ def calc_polygon_fill_vertices(pgon, max_spacing):
                     delete_indices.append(idx + 1)
                 if number.isclose(p0.y, e0.y_max) and number.isclose(p1.y, e1.y_max):
                     delete_indices.append(idx + 1)
+        #
         points = []
         for idx, point in enumerate(raw_points):
             if idx not in delete_indices:
                 points.append(point)
-        print('*' * 80)
-        for p0, e0 in zip(points, active_list):
-            print(p0, e0)
+        # print('*' * 80)
+        # for p0, e0 in zip(points, active_list):
+        #     print(p0, e0)
         #
-        is_cut = True
-        for segment in iter_util.pairwise_iter(points):
-            if is_cut:
-                cuts.append(segment)
+        first_point_is_cut = False
+        if last_edge is not None:
+            if active_list[0] == last_edge:
+                first_point_is_cut = True
+        #
+        is_cut = False
+        for point, is_first in iter_util.is_first_tup(points):
+            result_point_list.append(point)
+            if is_first:
+                result_iscut_list.append(first_point_is_cut)
             else:
-                jogs.append(segment)
-            is_cut = not is_cut
-    from .plot import plot_poly_and_fill_lines
-    plot_poly_and_fill_lines(pgon, cuts, jogs)
+                result_iscut_list.append(is_cut)
+            is_cut = not(is_cut)
+        dir_left_to_right = not dir_left_to_right
+        last_edge = active_list[-1]
+    result = (result_point_list, result_iscut_list)
+    # from .plot import plot_poly_and_fill_lines
+    # plot_poly_and_fill_lines(pgon, result)
     return result
 
 
