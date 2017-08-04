@@ -3,11 +3,15 @@ import numpy as np
 
 mm_per_inch = 25.4
 NUM2STR_FORMAT = "{:.5f}"
-CLOSE_TOLERANCE = 1.0e-6
+CLOSE_TOLERANCE = 1.1e-5
 
 
 def isclose(arg_a, arg_b, close_tolerance=CLOSE_TOLERANCE):
     return math.isclose(arg_a, arg_b, abs_tol=close_tolerance)
+
+
+def allclose(arg_a, arg_b, close_tolerance=CLOSE_TOLERANCE):
+    return np.allclose(arg_a, arg_b, atol=close_tolerance)
 
 
 def num2str(arg):
