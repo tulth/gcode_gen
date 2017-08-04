@@ -248,7 +248,7 @@ G1 X6.00000'''
 test_square = [[-1, -1, 0], [1, -1, 0], [1, 1, 0], [-1, 1, 0], ]
 
 
-class TestPolygon(unittest.TestCase):
+class TestCutPolygon(unittest.TestCase):
     def test_get_gcode(self):
         tool = Carbide3D_101()
         state = CncState(tool=tool, z_safe=40, feed_rate=None, milling_feed_rate=40)

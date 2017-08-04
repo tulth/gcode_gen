@@ -32,6 +32,9 @@ class XYZ(object):
     def __iter__(self):
         return iter(self.xyz)
 
+    def __str__(self):
+        return "({}, {}, {})".format(*self.xyz)
+
 
 class Point(XYZ):
     '''Point class for representing 3-d x/y/z cartesian coordinates.
@@ -57,7 +60,7 @@ class Point(XYZ):
         return Point(*new_xyz)
 
     def __eq__(self, other):
-        return np.allclose(actual, expect)
+        return np.allclose(self.xyz, other.xyz)
 
     def __str__(self):
         return '({}, {}, {})'.format(*(map(number.num2str, self.xyz)))

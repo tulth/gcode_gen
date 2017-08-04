@@ -3,15 +3,26 @@ import numpy as np
 from numpy.linalg import norm
 import math
 import itertools
-from . import iter_util
-from . import point
-from . import transform
-from .debug import DBGP
+from .. import iter_util
+from .. import point
+from .. import transform
+from ..debug import DBGP
+from . import fill
 
 
 def unit(vec):
     '''return unit vector for given vec'''
     return vec / norm(vec)
+
+
+def poly_circle_verts(segments_per_circle=32):
+    spc = segments_per_circle
+    assert spc >= 3
+    phi0 = np.pi / 2
+    if spc % 2 == 0:
+        phi0 += np.pi / spc
+    vertices = [(np.cos(phi + phi0), np.sin(phi + phi0)) for phi in np.linspace(0, 2 * np.pi, spc, endpoint=False)]
+    return point.PointList(vertices)
 
 
 class PolygonError(Exception):
@@ -88,6 +99,24 @@ class Polygon(transform.TransformablePointList):
                 break
         return result
 
+    @property
+    def bounds(self):
+        '''returns array:
+        [[xmin, xmax],
+         [ymin, ymax],
+         [zmin, zmax], ]'''
+        bounds = []
+        # print(self.arr.shape[1])
+        for dim_num in range(self.arr.shape[1]):
+            bounds.append((np.min(self.arr[:, dim_num]), np.max(self.arr[:, dim_num]), ))
+        bounds = np.asarray(bounds)
+        return bounds
+
+    # @property
+    # def boundingBox(self, ):
+    #     if self._boundingBox is None:
+    #         self._boundingBox = vertex.getBoundingBox(self.vertices)
+    #     return self._boundingBox
     # def get_orientations(self):
     #     '''for each corner centered on a vertex,
     #          returns 0 if collinear, 1 if clockwise, -1 if counter clockwise'''
@@ -233,3 +262,6 @@ class SimplePolygon(CoplanarPolygon):
 
     def grow(self, amount):
         return self.shrink(-amount)
+
+
+

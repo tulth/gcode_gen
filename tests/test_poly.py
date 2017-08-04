@@ -41,7 +41,27 @@ square_botched = ((0, 0),
                   )
 
 
-class TestPolygon(unittest.TestCase):
+class TestPolyCircleVerts(unittest.TestCase):
+    def test_poly_circle_verts_3(self):
+        pl = poly.poly_circle_verts(3)
+        actual = pl.arr
+        expect = ((0, 1, 0),
+                  (-0.866025403784, -.5, 0),
+                  (0.866025403784, -.5, 0), )
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
+
+    def test_poly_circle_verts_4(self):
+        pl = poly.poly_circle_verts(4)
+        actual = pl.arr
+        expect = ((-0.7071067811850, 0.7071067811850, 0),
+                  (-0.7071067811850, -0.7071067811850, 0),
+                  (0.7071067811850, -0.7071067811850, 0),
+                  (0.7071067811850, 0.7071067811850, 0),
+                  )
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
+
+
+class TestPolyPolygon(unittest.TestCase):
 
     def test_too_few_vertices(self):
         actual = ""
@@ -148,6 +168,21 @@ class TestPolygon(unittest.TestCase):
         #
         tp = poly.Polygon(point.PointList(test_all_colin))
         self.assertTrue(tp.is_all_collinear())
+
+    def test_bounds(self):
+        sqr = poly.Polygon(point.PointList(test_square))
+        actual = sqr.bounds
+        expect = [[-1, 1],
+                  [-1, 1],
+                  [0, 0], ]
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
+        #
+        sqr = poly.Polygon(point.PointList(test_square_skew))
+        actual = sqr.bounds
+        expect = [[-1, 1],
+                  [-1, 1],
+                  [0, 1], ]
+        self.assertTrue(np.allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
 
     # def test_get_orientations(self):
     #     # tp = poly.CoplanarPolygon(point.PointList(test_square))
