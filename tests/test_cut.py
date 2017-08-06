@@ -298,7 +298,6 @@ G1 Y10.00000
                          milling_feed_rate=40)
         root = assembly.Assembly(name='root', state=state)
         verts = np.array(test_square) * 5.3975
-        print(verts)
         root += cut.Polygon(vertices=verts,
                             depth=1,
                             is_filled=False,
@@ -347,7 +346,6 @@ G1 Y-5.39750
                          milling_feed_rate=40)
         root = assembly.Assembly(name='root', state=state)
         verts = np.array(test_square) * 5.3975
-        print(verts)
         root += cut.Polygon(vertices=verts,
                             depth=1,
                             is_filled=True,
@@ -356,8 +354,6 @@ G1 Y-5.39750
                             )
         gcl = root.get_gcode()
         actual = '\n'.join(map(str, gcl)) + '\n'
-        print()
-        print(actual)
         expected = '''G0 Z40.00000
 G0 X-5.39750 Y-2.69875
 G0 Z0.50000
@@ -432,7 +428,6 @@ G1 Y-5.39750
                          milling_feed_rate=40)
         root = assembly.Assembly(name='root', state=state)
         verts = np.array(test_square) * 5.3975
-        print(verts)
         root += cut.Polygon(vertices=verts,
                             depth=1,
                             is_filled=True,
@@ -441,8 +436,6 @@ G1 Y-5.39750
                             ).translate(7, 11)
         gcl = root.get_gcode()
         actual = '\n'.join(map(str, gcl)) + '\n'
-        print()
-        print(actual)
         expected = '''G0 Z40.00000
 G0 X1.60250 Y8.30125
 G0 Z0.50000
@@ -508,6 +501,124 @@ G1 X1.60250
 G1 Y5.60250
 '''
         self.assertEqual(actual, expected)
+
+    def test_get_gcode_filled2(self):
+        self.maxDiff = None
+        tool = Carbide3D_101()
+        state = CncState(tool=tool, z_safe=40, feed_rate=None,
+                         milling_overlap=0.842519685039,
+                         depth_per_milling_pass=0.5,
+                         milling_feed_rate=40)
+        root = assembly.Assembly(name='root', state=state)
+        verts = verts = [[0, 0, 0],
+                         [3, 1, 0],
+                         [2, 3, 0],
+                         [1, 2, 0],
+                         [-1, 3, 0], ]
+        root += cut.Polygon(vertices=verts,
+                            depth=1,
+                            is_filled=True,
+                            cut_style='follow-cut',
+                            name='poly',
+                            )
+        gcl = root.get_gcode()
+        actual = '\n'.join(map(str, gcl)) + '\n'
+        print()
+        print(actual)
+        expected = '''G0 Z40.00000
+G0 X-0.16667 Y0.50000
+G0 Z0.50000
+F 40.00000
+G1 Z0.00000
+G1 X1.50000
+G0 Z40.00000
+G0 X3.00000 Y1.00000
+G0 Z0.50000
+G1 Z0.00000
+G1 X-0.33333
+G1 X-0.50000 Y1.50000
+G1 X2.75000
+G1 X2.50000 Y2.00000
+G1 X-0.66667
+G1 X-0.83333 Y2.50000
+G1 X0.00000
+G0 Z40.00000
+G0 X1.50000
+G0 Z0.50000
+G1 Z0.00000
+G1 X2.25000
+G0 Z40.00000
+G0 X0.00000 Y0.00000
+G0 Z0.50000
+G1 Z0.00000
+G1 X3.00000 Y1.00000
+G1 X2.00000 Y3.00000
+G1 X1.00000 Y2.00000
+G1 X-1.00000 Y3.00000
+G1 X0.00000 Y0.00000
+G0 Z40.00000
+G0 X-0.16667 Y0.50000
+G0 Z0.00000
+G1 Z-0.50000
+G1 X1.50000
+G0 Z40.00000
+G0 X3.00000 Y1.00000
+G0 Z0.00000
+G1 Z-0.50000
+G1 X-0.33333
+G1 X-0.50000 Y1.50000
+G1 X2.75000
+G1 X2.50000 Y2.00000
+G1 X-0.66667
+G1 X-0.83333 Y2.50000
+G1 X0.00000
+G0 Z40.00000
+G0 X1.50000
+G0 Z0.00000
+G1 Z-0.50000
+G1 X2.25000
+G0 Z40.00000
+G0 X0.00000 Y0.00000
+G0 Z0.00000
+G1 Z-0.50000
+G1 X3.00000 Y1.00000
+G1 X2.00000 Y3.00000
+G1 X1.00000 Y2.00000
+G1 X-1.00000 Y3.00000
+G1 X0.00000 Y0.00000
+G0 Z40.00000
+G0 X-0.16667 Y0.50000
+G0 Z-0.50000
+G1 Z-1.00000
+G1 X1.50000
+G0 Z40.00000
+G0 X3.00000 Y1.00000
+G0 Z-0.50000
+G1 Z-1.00000
+G1 X-0.33333
+G1 X-0.50000 Y1.50000
+G1 X2.75000
+G1 X2.50000 Y2.00000
+G1 X-0.66667
+G1 X-0.83333 Y2.50000
+G1 X0.00000
+G0 Z40.00000
+G0 X1.50000
+G0 Z-0.50000
+G1 Z-1.00000
+G1 X2.25000
+G0 Z40.00000
+G0 X0.00000 Y0.00000
+G0 Z-0.50000
+G1 Z-1.00000
+G1 X3.00000 Y1.00000
+G1 X2.00000 Y3.00000
+G1 X1.00000 Y2.00000
+G1 X-1.00000 Y3.00000
+G1 X0.00000 Y0.00000
+'''
+        self.assertEqual(actual, expected)
+
 
 # class TestCutCylinder(unittest.TestCase):
 #     def test_get_gcode(self):

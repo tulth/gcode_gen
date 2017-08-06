@@ -129,17 +129,18 @@ class Polygon(Assembly):
         if self.is_filled:
             last_z_cut_step = 0
             for z_cut_step in z_cut_steps:
-                first_vert = True
-                for fill_vert, is_mill in zip(fill_verts, is_mills):
-                    if first_vert:
-                        self += UnsafeMill(fill_vert.x, fill_vert.y, last_z_cut_step)
-                        self += UnsafeMill(fill_vert.x, fill_vert.y, z_cut_step)
-                    elif is_mill:
+                if cut_poly.is_convex():
+                    self += UnsafeMill(fill_verts[0].x, fill_verts[0].y, last_z_cut_step)
+                else:
+                    self += SafeJog(fill_verts[0].x, fill_verts[0].y, z_cut_step + self.state['z_margin'])
+                for (fill_vert, is_mill), first in iter_util.is_first_tup(zip(fill_verts, is_mills)):
+                    if is_mill:
                         self += UnsafeMill(fill_vert.x, fill_vert.y, z_cut_step)
                     else:
-                        self += SafeJog(fill_vert.x, fill_vert.y,
-                                        z=z_cut_step + self.state['z_margin'])
-                        self += UnsafeMill(z_cut_step)
+                        if not first:
+                            self += SafeJog(fill_vert.x, fill_vert.y,
+                                            z=z_cut_step + self.state['z_margin'])
+                        self += UnsafeMill(fill_vert.x, fill_vert.y, z_cut_step)
                     first_vert = False
                 if not cut_poly.is_convex():
                     self += SafeJog(perimeter_verts[0].x, perimeter_verts[0].y,
