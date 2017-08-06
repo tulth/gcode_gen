@@ -290,3 +290,262 @@ G1 Y10.00000
 '''
         self.assertEqual(actual, expected)
 
+    def test_get_gcode2(self):
+        self.maxDiff = None
+        tool = Carbide3D_101()
+        state = CncState(tool=tool, z_safe=40, feed_rate=None,
+                         depth_per_milling_pass=0.25,
+                         milling_feed_rate=40)
+        root = assembly.Assembly(name='root', state=state)
+        verts = np.array(test_square) * 5.3975
+        print(verts)
+        root += cut.Polygon(vertices=verts,
+                            depth=1,
+                            is_filled=False,
+                            cut_style='follow-cut',
+                            name='poly',
+                            )
+        gcl = root.get_gcode()
+        actual = '\n'.join(map(str, gcl)) + '\n'
+        expected = '''G0 Z40.00000
+G0 X-5.39750 Y-5.39750
+G0 Z0.50000
+F 40.00000
+G1 Z0.00000
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+G1 Z-0.25000
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+G1 Z-0.50000
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+G1 Z-0.75000
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+G1 Z-1.00000
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+'''
+        self.assertEqual(actual, expected)
+
+    def test_get_gcode_filled(self):
+        self.maxDiff = None
+        tool = Carbide3D_101()
+        state = CncState(tool=tool, z_safe=40, feed_rate=None,
+                         depth_per_milling_pass=0.25,
+                         milling_feed_rate=40)
+        root = assembly.Assembly(name='root', state=state)
+        verts = np.array(test_square) * 5.3975
+        print(verts)
+        root += cut.Polygon(vertices=verts,
+                            depth=1,
+                            is_filled=True,
+                            cut_style='follow-cut',
+                            name='poly',
+                            )
+        gcl = root.get_gcode()
+        actual = '\n'.join(map(str, gcl)) + '\n'
+        print()
+        print(actual)
+        expected = '''G0 Z40.00000
+G0 X-5.39750 Y-2.69875
+G0 Z0.50000
+F 40.00000
+G1 Z0.00000
+G1 X5.39750
+G1 Y0.00000
+G1 X-5.39750
+G1 Y2.69875
+G1 X5.39750
+G1 X-5.39750 Y-5.39750
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+G1 Y-2.69875
+G1 Z-0.25000
+G1 X5.39750
+G1 Y0.00000
+G1 X-5.39750
+G1 Y2.69875
+G1 X5.39750
+G1 X-5.39750 Y-5.39750
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+G1 Y-2.69875
+G1 Z-0.50000
+G1 X5.39750
+G1 Y0.00000
+G1 X-5.39750
+G1 Y2.69875
+G1 X5.39750
+G1 X-5.39750 Y-5.39750
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+G1 Y-2.69875
+G1 Z-0.75000
+G1 X5.39750
+G1 Y0.00000
+G1 X-5.39750
+G1 Y2.69875
+G1 X5.39750
+G1 X-5.39750 Y-5.39750
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+G1 Y-2.69875
+G1 Z-1.00000
+G1 X5.39750
+G1 Y0.00000
+G1 X-5.39750
+G1 Y2.69875
+G1 X5.39750
+G1 X-5.39750 Y-5.39750
+G1 X5.39750
+G1 Y5.39750
+G1 X-5.39750
+G1 Y-5.39750
+'''
+        self.assertEqual(actual, expected)
+
+    def test_get_gcode_filled_translate(self):
+        self.maxDiff = None
+        tool = Carbide3D_101()
+        state = CncState(tool=tool, z_safe=40, feed_rate=None,
+                         depth_per_milling_pass=0.25,
+                         milling_feed_rate=40)
+        root = assembly.Assembly(name='root', state=state)
+        verts = np.array(test_square) * 5.3975
+        print(verts)
+        root += cut.Polygon(vertices=verts,
+                            depth=1,
+                            is_filled=True,
+                            cut_style='follow-cut',
+                            name='poly',
+                            ).translate(7, 11)
+        gcl = root.get_gcode()
+        actual = '\n'.join(map(str, gcl)) + '\n'
+        print()
+        print(actual)
+        expected = '''G0 Z40.00000
+G0 X1.60250 Y8.30125
+G0 Z0.50000
+F 40.00000
+G1 Z0.00000
+G1 X12.39750
+G1 Y11.00000
+G1 X1.60250
+G1 Y13.69875
+G1 X12.39750
+G1 X1.60250 Y5.60250
+G1 X12.39750
+G1 Y16.39750
+G1 X1.60250
+G1 Y5.60250
+G1 Y8.30125
+G1 Z-0.25000
+G1 X12.39750
+G1 Y11.00000
+G1 X1.60250
+G1 Y13.69875
+G1 X12.39750
+G1 X1.60250 Y5.60250
+G1 X12.39750
+G1 Y16.39750
+G1 X1.60250
+G1 Y5.60250
+G1 Y8.30125
+G1 Z-0.50000
+G1 X12.39750
+G1 Y11.00000
+G1 X1.60250
+G1 Y13.69875
+G1 X12.39750
+G1 X1.60250 Y5.60250
+G1 X12.39750
+G1 Y16.39750
+G1 X1.60250
+G1 Y5.60250
+G1 Y8.30125
+G1 Z-0.75000
+G1 X12.39750
+G1 Y11.00000
+G1 X1.60250
+G1 Y13.69875
+G1 X12.39750
+G1 X1.60250 Y5.60250
+G1 X12.39750
+G1 Y16.39750
+G1 X1.60250
+G1 Y5.60250
+G1 Y8.30125
+G1 Z-1.00000
+G1 X12.39750
+G1 Y11.00000
+G1 X1.60250
+G1 Y13.69875
+G1 X12.39750
+G1 X1.60250 Y5.60250
+G1 X12.39750
+G1 Y16.39750
+G1 X1.60250
+G1 Y5.60250
+'''
+        self.assertEqual(actual, expected)
+
+# class TestCutCylinder(unittest.TestCase):
+#     def test_get_gcode(self):
+#         tool = Carbide3D_101()
+#         state = CncState(tool=tool, z_safe=40, feed_rate=None, milling_feed_rate=40)
+#         root = assembly.Assembly(name='root', state=state)
+#         root += cut.Cylinder(depth=12,
+#                              diameter=10,
+#                              name='cylinder',
+#                              ).translate(7, 11)
+#         gcl = root.get_gcode()
+#         actual = '\n'.join(map(str, gcl)) + '\n'
+#         print()
+#         print(actual)
+#         expected = '''G0 Z40.00000
+# G0 X6.00000 Y10.00000
+# G0 Z0.50000
+# F 40.00000
+# G1 Z0.00000
+# G1 X8.00000
+# G1 Y12.00000
+# G1 X6.00000
+# G1 Y10.00000
+# G1 Z-0.33333
+# G1 X8.00000
+# G1 Y12.00000
+# G1 X6.00000
+# G1 Y10.00000
+# G1 Z-0.66667
+# G1 X8.00000
+# G1 Y12.00000
+# G1 X6.00000
+# G1 Y10.00000
+# G1 Z-1.00000
+# G1 X8.00000
+# G1 Y12.00000
+# G1 X6.00000
+# G1 Y10.00000
+# '''
+#         self.assertEqual(actual, expected)
+

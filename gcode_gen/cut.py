@@ -108,20 +108,49 @@ class Polygon(Assembly):
         if not isinstance(is_filled, bool):
             raise TypeError('is_filled must be bool; given arg {}'.format(is_filled))
         self.is_filled = is_filled
-        assert not(self.is_filled)
         self.poly = poly.SimplePolygon(vertices)
 
     def update_children_preorder(self):
         pre_children_len = len(self.children)
         cut_poly = self.get_cut_poly()
-        self += SafeJog(x=cut_poly.arr[0][0], y=cut_poly.arr[0][1], z=self.state['z_margin'])
+        perimeter_verts = list(iter_util.all_plus_first_iter(cut_poly))
+        if self.is_filled:
+            max_spacing = self.state['tool'].cut_diameter * (1 - self.state['milling_overlap'])
+            fill_verts, is_mills = poly.fill.calc_polygon_fill_vertices(cut_poly, max_spacing)
+            self += SafeJog(x=fill_verts[0].x, y=fill_verts[0].y, z=self.state['z_margin'])
+            # print(is_mills)
+            # from gcode_gen.poly.plot import plot_poly_and_fill_lines
+            # plot_poly_and_fill_lines(cut_poly, (fill_verts, is_mills))
+        else:
+            self += SafeJog(x=perimeter_verts[0].x, y=perimeter_verts[0].y, z=self.state['z_margin'])
         #
         depth_per_pass = self.state['depth_per_milling_pass']
         z_cut_steps = number.calc_steps_with_max_spacing(0, -self.depth, depth_per_pass)
-        verts = list(iter_util.all_plus_first_iter(cut_poly.arr))
-        for z_cut_step in z_cut_steps:
-            self += UnsafeMill(*verts[0]).translate(z=z_cut_step)
-            self += Mill(vertices=verts).translate(z=z_cut_step)
+        if self.is_filled:
+            last_z_cut_step = 0
+            for z_cut_step in z_cut_steps:
+                first_vert = True
+                for fill_vert, is_mill in zip(fill_verts, is_mills):
+                    if first_vert:
+                        self += UnsafeMill(fill_vert.x, fill_vert.y, last_z_cut_step)
+                        self += UnsafeMill(fill_vert.x, fill_vert.y, z_cut_step)
+                    elif is_mill:
+                        self += UnsafeMill(fill_vert.x, fill_vert.y, z_cut_step)
+                    else:
+                        self += SafeJog(fill_vert.x, fill_vert.y,
+                                        z=z_cut_step + self.state['z_margin'])
+                        self += UnsafeMill(z_cut_step)
+                    first_vert = False
+                if not cut_poly.is_convex():
+                    self += SafeJog(perimeter_verts[0].x, perimeter_verts[0].y,
+                                    z=z_cut_step + self.state['z_margin'])
+                self += UnsafeMill(perimeter_verts[0].x, perimeter_verts[0].y, z_cut_step)
+                self += Mill(vertices=perimeter_verts).translate(z=z_cut_step)
+                last_z_cut_step = z_cut_step
+        else:
+            for z_cut_step in z_cut_steps:
+                self += UnsafeMill(perimeter_verts[0].x, perimeter_verts[0].y, z_cut_step)
+                self += Mill(vertices=perimeter_verts).translate(z=z_cut_step)
         return ()
 
     def update_children_postorder(self):
@@ -136,3 +165,9 @@ class Polygon(Assembly):
         else:
             return self.poly
 
+
+class Cylinder(Polygon):
+    def __init__(self, depth, diameter, segments_per_circle=32, name=None, parent=None, state=None):
+        verts = poly.poly_circle_verts(segments_per_circle)
+        super().__init__(vertices=verts, depth=depth, cut_style='inside-cut', is_filled=True,
+                         name=name, parent=parent, state=state)

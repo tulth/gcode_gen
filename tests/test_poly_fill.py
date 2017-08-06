@@ -79,7 +79,7 @@ class TestFillCalc(unittest.TestCase):
                            (3.83333, 4.50000, 0.00000), ))
         self.assertTrue(allclose(actual, expect), 'actual: {}\nexpect:{}'.format(actual, expect))
         actual = result[1]
-        expect = [False, True, True, True, True, True, True, True, False, True]
+        expect = [False, True, True, True, True, True, True, True, True, True]
         self.assertEqual(actual, expect)
 
     def test_calc_polygon_fill_vertices1(self):

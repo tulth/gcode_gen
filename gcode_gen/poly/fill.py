@@ -71,6 +71,8 @@ def calc_polygon_fill_vertices(pgon, max_spacing):
     assert isinstance(pgon, poly.SimplePolygon)
     result_point_list = pt.PointList()
     result_iscut_list = []
+    convex = pgon.is_convex()
+    print("convex={}".format(convex))
     bounds = pgon.bounds
     pgon_y_min, pgon_y_max = bounds[1]
     y_step_list = number.calc_steps_with_max_spacing(pgon_y_min, pgon_y_max, max_spacing)
@@ -115,7 +117,9 @@ def calc_polygon_fill_vertices(pgon, max_spacing):
         #
         first_point_is_cut = False
         if last_edge is not None:
-            if active_list[0] == last_edge:
+            if convex:
+                first_point_is_cut = True
+            elif active_list[0] == last_edge:
                 first_point_is_cut = True
         #
         is_cut = False
@@ -125,7 +129,7 @@ def calc_polygon_fill_vertices(pgon, max_spacing):
                 result_iscut_list.append(first_point_is_cut)
             else:
                 result_iscut_list.append(is_cut)
-            is_cut = not(is_cut)
+            is_cut = not is_cut
         dir_left_to_right = not dir_left_to_right
         last_edge = active_list[-1]
     result = (result_point_list, result_iscut_list)
